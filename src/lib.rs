@@ -4,6 +4,8 @@ use std::time::Duration;
 use std::{mem, ptr};
 
 use crate::sdk::classes::CUserCmd;
+use crate::sdk::entity_list::EntityList;
+use crate::sdk::get_interface;
 use rand::Rng;
 use winapi::ctypes::c_int;
 use winapi::shared::minwindef::{BOOL, DWORD, HINSTANCE, LPVOID};
@@ -16,10 +18,10 @@ use winapi::um::winuser::{GetAsyncKeyState, VK_END};
 mod macros;
 mod sdk;
 
-pub fn thing(module: HINSTANCE) {
-    unsafe {
-        AllocConsole();
-    }
+/// # Safety
+/// This is not safe at all, we just need this to not get clippy warnings
+pub unsafe fn entry(module: HINSTANCE) {
+    AllocConsole();
 
     init_hooks();
 
@@ -41,9 +43,8 @@ pub fn thing(module: HINSTANCE) {
 pub extern "system" fn DllMain(module: HINSTANCE, fdw_reason: DWORD, _: LPVOID) -> BOOL {
     if fdw_reason == DLL_PROCESS_ATTACH {
         let hmodule = module as usize;
-        std::thread::spawn(move || thing(hmodule as HINSTANCE));
+        std::thread::spawn(move || unsafe { entry(hmodule as HINSTANCE) });
     }
-
     1
 }
 
@@ -68,18 +69,24 @@ pub extern "fastcall" fn create_move(
         if c_user_cmd.is_null() {
             return create_move_original(ecx, edx, flt_sampletime, c_user_cmd);
         }
-        let a = &mut *c_user_cmd;
+        // let a = &mut *c_user_cmd;
 
-        let old_yaw = a.view_angles.y;
-        let new_yaw = rng.gen::<f32>() * 360.0 - 180.0;
-        let delta_yaw = (new_yaw - old_yaw).to_radians();
+        let test = dbg!(get_interface::<EntityList>(
+            "VClientEntityList003",
+            "client.dll"
+        ));
+        dbg!(&test.get_highest_entity_index());
 
-        a.view_angles.y = new_yaw;
-
-        let forward = a.forward_move;
-        let strafe = a.side_move;
-        a.forward_move = delta_yaw.cos() * forward - delta_yaw.sin() * strafe;
-        a.side_move = delta_yaw.sin() * forward + delta_yaw.cos() * strafe;
+        // let old_yaw = a.view_angles.y;
+        // let new_yaw = rng.gen::<f32>() * 360.0 - 180.0;
+        // let delta_yaw = (new_yaw - old_yaw).to_radians();
+        //
+        // a.view_angles.y = new_yaw;
+        //
+        // let forward = a.forward_move;
+        // let strafe = a.side_move;
+        // a.forward_move = delta_yaw.cos() * forward - delta_yaw.sin() * strafe;
+        // a.side_move = delta_yaw.sin() * forward + delta_yaw.cos() * strafe;
     }
 
     false

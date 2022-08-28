@@ -1,6 +1,14 @@
+pub trait Interface {
+    fn new(base_address: usize) -> Self
+    where
+        Self: Sized;
+
+    fn base_address(&self) -> usize;
+}
+
 #[macro_export]
 macro_rules! lpcstr {
-    ($string:literal) => {
+    ($string:expr) => {
         format!("{}\0", $string).as_ptr() as winapi::um::winnt::LPCSTR
     };
 }
@@ -9,19 +17,20 @@ macro_rules! lpcstr {
 macro_rules! define_interface {
     ($name:ident) => {
         #[allow(dead_code)]
+        #[derive(Copy, Clone, Debug)]
         pub struct $name {
-            class_base: usize,
+            base_address: usize,
         }
 
-        impl $name {
+        impl $crate::macros::Interface for $name {
             #[allow(dead_code)]
-            pub fn new(class_base: usize) -> Self {
-                Self { class_base }
+            fn new(base_address: usize) -> Self {
+                Self { base_address }
             }
 
             #[allow(dead_code)]
-            pub fn class_base(&self) -> usize {
-                self.class_base
+            fn base_address(&self) -> usize {
+                self.base_address
             }
         }
     };
