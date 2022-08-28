@@ -4,7 +4,6 @@ use std::time::Duration;
 use std::{mem, ptr};
 
 use crate::sdk::classes::CUserCmd;
-use hook_rs_lib::hooks::vtable::VMT;
 use rand::Rng;
 use winapi::ctypes::c_int;
 use winapi::shared::minwindef::{BOOL, DWORD, HINSTANCE, LPVOID};
@@ -12,13 +11,10 @@ use winapi::um::consoleapi::AllocConsole;
 use winapi::um::libloaderapi::{FreeLibraryAndExitThread, GetModuleHandleA, GetProcAddress};
 use winapi::um::wincon::FreeConsole;
 use winapi::um::winnt::DLL_PROCESS_ATTACH;
-use winapi::um::winuser::{GetAsyncKeyState, HARDWAREHOOKSTRUCT, VK_END};
+use winapi::um::winuser::{GetAsyncKeyState, VK_END};
 
 mod macros;
 mod sdk;
-
-const DEG_TO_RAD: f32 = 0.017453292519943295;
-const RAD_TO_DEG: f32 = 57.29577951308232;
 
 pub fn thing(module: HINSTANCE) {
     unsafe {
@@ -40,7 +36,6 @@ pub fn thing(module: HINSTANCE) {
         }
     }
 }
-static mut test: u64 = 0;
 
 #[no_mangle]
 pub extern "system" fn DllMain(module: HINSTANCE, fdw_reason: DWORD, _: LPVOID) -> BOOL {
@@ -77,16 +72,14 @@ pub extern "fastcall" fn create_move(
 
         let old_yaw = a.view_angles.y;
         let new_yaw = rng.gen::<f32>() * 360.0 - 180.0;
-        let delta_yaw = new_yaw - old_yaw;
+        let delta_yaw = (new_yaw - old_yaw).to_radians();
 
         a.view_angles.y = new_yaw;
 
-        let prev_forward = a.forward_move;
-        let prev_sidemove = a.side_move;
-        a.forward_move = (delta_yaw * DEG_TO_RAD).cos() * prev_forward
-            + ((delta_yaw + 90.0) * DEG_TO_RAD).cos() * prev_sidemove;
-        a.side_move = (delta_yaw * DEG_TO_RAD).sin() * prev_forward
-            + ((delta_yaw + 90.0) * DEG_TO_RAD).sin() * prev_sidemove;
+        let forward = a.forward_move;
+        let strafe = a.side_move;
+        a.forward_move = delta_yaw.cos() * forward - delta_yaw.sin() * strafe;
+        a.side_move = delta_yaw.sin() * forward + delta_yaw.cos() * strafe;
     }
 
     false
