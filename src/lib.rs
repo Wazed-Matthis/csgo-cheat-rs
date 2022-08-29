@@ -1,13 +1,16 @@
 #![feature(abi_thiscall)]
 
 use hook_rs_lib::{function_hook, register_hooks};
+use log::debug;
+use pretty_env_logger::env_logger::Target;
 use std::ffi::{c_char, c_float, c_void};
 use std::time::Duration;
 use std::{mem, ptr};
 
 use crate::sdk::classes::CUserCmd;
+use crate::sdk::engine::Engine;
 use crate::sdk::entity_list::{CEntity, EntityList};
-use crate::sdk::get_interface;
+use crate::sdk::{get_interface, get_interface_raw, init_interface};
 use winapi::ctypes::c_int;
 use winapi::shared::minwindef::{BOOL, DWORD, HINSTANCE, LPVOID};
 use winapi::um::consoleapi::AllocConsole;
@@ -23,8 +26,11 @@ mod sdk;
 /// This is not safe at all, we just need this to not get clippy warnings
 pub unsafe fn entry(module: HINSTANCE) {
     AllocConsole();
-
+    std::env::set_var("RUST_LOG", "debug");
+    pretty_env_logger::init();
     init_hooks();
+    init_interface::<Engine>("VEngineClient014", "engine.dll");
+    init_interface::<EntityList>("VClientEntityList003", "client.dll");
 
     loop {
         std::thread::sleep(Duration::from_millis(5));
@@ -64,13 +70,20 @@ pub extern "fastcall" fn create_move(
     flt_sampletime: c_float,
     c_user_cmd: *mut CUserCmd,
 ) -> bool {
-    if c_user_cmd.is_null() {
+    let engine = get_interface::<Engine>("VEngineClient014").unwrap();
+
+    if c_user_cmd.is_null() || !engine.is_ingame() {
         return create_move_original(ecx, edx, flt_sampletime, c_user_cmd);
     }
     // let a = &mut *c_user_cmd;
 
-    let entity_list = get_interface::<EntityList>("VClientEntityList003", "client.dll");
-    let self_player = dbg!(CEntity::from_raw(dbg!(entity_list.get_entity(0) as usize)));
+    // for i in 0..entity_list.get_highest_entity_index() {
+    //     let e = entity_list.get_entity(i);
+    //     dbg!(e);
+    // }
+
+    // 28AD0560
+    //dbg!(CEntity::from_raw(dbg!(entity_list.get_entity(1) as usize)));
 
     // println!("{:?}", self_player.is_player());
 
@@ -90,6 +103,9 @@ pub extern "fastcall" fn create_move(
 
 #[function_hook(interface = "VClient018", module = "client.dll", index = 37)]
 pub extern "fastcall" fn frame_stage_notify(ecx: *const c_void, edx: *const c_void, stage: i32) {
+    let engine_client =
+        sdk::get_interface::<Engine>("VEngineClient014").expect("Failed to get interface");
+    println!("{}", engine_client.is_ingame());
     frame_stage_notify_original(ecx, edx, stage)
 }
 
@@ -104,4 +120,4 @@ pub extern "fastcall" fn paint_traverse(
     paint_traverse_original(exc, edx, panel, force_repaint, allow_force)
 }
 
-register_hooks!(create_move);
+register_hooks!(create_move, frame_stage_notify, paint_traverse);
