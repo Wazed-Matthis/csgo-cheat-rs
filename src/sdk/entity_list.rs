@@ -1,24 +1,42 @@
+use vtables::VTable;
+use vtables_derive::{has_vtable, virtual_index, VTable};
+
 use crate::{define_interface, vfunc};
+use crate::memory::NotNull;
+use crate::sdk::classes::Vec3;
 
-define_interface!(EntityList);
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct CEntity {
-    base_address: usize,
-}
+#[has_vtable]
+#[derive(VTable, Debug)]
+pub struct CEntity {}
 
 impl CEntity {
-    pub fn from_raw(base_address: usize) -> Self {
-        Self { base_address }
-    }
+
+    #[virtual_index(122)]
+    pub fn health(&self) -> i32 {}
+
+    #[virtual_index(156)]
+    pub fn is_alive(&self) -> bool {}
+
+    #[virtual_index(158)]
+    pub fn is_player(&self) -> bool {}
+
+    #[virtual_index(10)]
+    pub fn get_abs_origin(&self) -> &'static Vec3 {}
+
+    #[virtual_index(88)]
+    pub fn get_team(&self) -> i32{}
+    
+    #[virtual_index(166)]
+    pub fn is_weapon(&self) -> bool{}
 }
 
-impl CEntity {
-    vfunc!(155, fn is_player() => bool);
-}
+#[has_vtable]
+#[derive(VTable, Debug)]
+pub struct EntityList {}
 
 impl EntityList {
-    vfunc!(3, fn get_entity(index: i32) => *const CEntity);
-    vfunc!(6, fn get_highest_entity_index() => i32);
+    #[virtual_index(3)]
+    pub fn entity(&self, index: i32) -> NotNull<CEntity> {}
+    #[virtual_index(6)]
+    pub fn highest_entity_index(&self) -> i32 {}
 }

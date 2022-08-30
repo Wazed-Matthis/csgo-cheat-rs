@@ -3,8 +3,8 @@ use std::fmt::Debug;
 
 pub trait Interface: Sync + Send + Any + Debug + Clone + Copy {
     fn new(base_address: usize) -> Self
-    where
-        Self: Sized;
+        where
+            Self: Sized;
 
     fn base_address(&self) -> usize;
     fn as_any(&self) -> &(dyn Any + Send + Sync);
