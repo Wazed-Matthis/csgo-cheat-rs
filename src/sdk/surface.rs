@@ -1,7 +1,8 @@
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void};
 
 use vtables::VTable;
 use vtables_derive::*;
+use winapi::ctypes::wchar_t;
 
 /**
     Taken from ION lolz I am big skid :feelsbadman:
@@ -74,4 +75,38 @@ impl Surface {
 
     #[virtual_index(19)]
     pub fn draw_line(&self, x: i32, y: i32, width: i32, height: i32) {}
+
+    #[virtual_index(79)]
+    pub fn text_size(&self, font: HFONT, text: *const wchar_t, wide: &mut i32, tall: &mut i32) {}
+
+    #[virtual_index(72)]
+    #[warn(clippy::too_many_arguments)]
+    pub fn font_glyph(
+        &self,
+        font: HFONT,
+        windows_font_name: *const c_char,
+        tall: i32,
+        weight: i32,
+        blur: i32,
+        scanlines: i32,
+        flags: i32,
+        what: i32,
+        what_1: i32,
+    ) -> bool {
+    }
+
+    #[virtual_index(71)]
+    pub fn create_font(&self) -> u64 {}
+
+    #[virtual_index(28)]
+    pub fn render_text(&self, text: *const wchar_t, text_len: i32, font_draw_type: i32) {}
+
+    #[virtual_index(26)]
+    pub fn text_pos(&self, x: i32, y: i32) {}
+
+    #[virtual_index(23)]
+    pub fn text_font(&self, font: HFONT) {}
+
+    #[virtual_index(25)]
+    pub fn text_color(&self, color: Color) {}
 }

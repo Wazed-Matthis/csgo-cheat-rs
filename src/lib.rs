@@ -35,6 +35,7 @@ use crate::sdk::surface::Color;
 
 pub mod events;
 pub mod features;
+pub mod font;
 pub mod interface;
 pub mod macros;
 pub mod memory;
@@ -52,6 +53,7 @@ pub unsafe fn entry(module: HINSTANCE) {
     pretty_env_logger::init();
     initialize();
     init_hooks();
+    font::setup_fonts();
     loop {
         std::thread::sleep(Duration::from_millis(5));
         if GetAsyncKeyState(VK_END) != 0 {
