@@ -3,10 +3,6 @@ use std::ffi::c_char;
 use vtables::VTable;
 use vtables_derive::{has_vtable, virtual_index, VTable};
 
-use crate::{define_interface, vfunc};
-
-define_interface!(Engine);
-
 #[has_vtable]
 #[derive(VTable, Debug)]
 pub struct EngineClient {}
@@ -29,10 +25,4 @@ impl EngineClient {
 
     #[virtual_index(113)]
     pub fn execute_client_command_unrestricted(&self, command: *const c_char) {}
-}
-
-impl Engine {
-    vfunc!(12, fn get_local_player() => i32);
-    vfunc!(26, fn is_ingame() => bool);
-    vfunc!(27, fn is_connected() => bool);
 }

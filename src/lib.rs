@@ -11,6 +11,8 @@ use std::{mem, ptr};
 use hook_rs_lib::{function_hook, register_hooks};
 use log::debug;
 use once_cell::sync::OnceCell;
+use rand::rngs::OsRng;
+use rand::Rng;
 use vtables::VTable;
 use winapi::ctypes::c_int;
 use winapi::shared::minwindef::{BOOL, DWORD, HINSTANCE, LPVOID};
@@ -21,7 +23,7 @@ use winapi::um::winnt::DLL_PROCESS_ATTACH;
 use winapi::um::winuser::{GetAsyncKeyState, VK_END};
 
 use crate::interface::Interfaces;
-use crate::sdk::classes::CUserCMD;
+use crate::sdk::classes::{CUserCMD, EButtons};
 use crate::sdk::client::Client;
 use crate::sdk::engine::EngineClient;
 use crate::sdk::entity_list::EntityList;
@@ -30,8 +32,8 @@ use crate::sdk::surface::Color;
 
 pub mod interface;
 pub mod macros;
-pub mod memory;
 pub mod sdk;
+mod source_api;
 
 static INTERFACES: OnceCell<Interfaces> = OnceCell::new();
 
@@ -42,7 +44,6 @@ pub unsafe fn entry(module: HINSTANCE) {
     std::env::set_var("RUST_LOG", "debug");
     pretty_env_logger::init();
     initialize();
-
     init_hooks();
     loop {
         std::thread::sleep(Duration::from_millis(5));
@@ -56,8 +57,7 @@ pub unsafe fn entry(module: HINSTANCE) {
 }
 
 pub fn initialize() {
-    INTERFACES.set(Interfaces::load()).unwrap();
-    sdk::netvars::manager::scan();
+    INTERFACES.set(Interfaces::init()).unwrap();
 }
 
 pub fn get_interfaces<'a>() -> &'a Interfaces {
@@ -90,36 +90,38 @@ pub extern "fastcall" fn create_move(
 ) -> bool {
     // let a = &mut *c_user_cmd;
     let interfaces = INTERFACES.get().unwrap();
-
     if c_user_cmd.is_null() || !interfaces.engine.is_in_game() {
         return create_move_original(ecx, edx, flt_sampletime, c_user_cmd);
     }
 
-    let local_player = interfaces.engine.local_player();
-    println!("{}", local_player);
-    if let Some(local_entity) = interfaces.entity_list.entity(local_player).get() {
-        debug!("Is alive: {}", local_entity.is_alive());
+    for i in 0..interfaces.global_vars.max_clients {
+        let entity = interfaces.entity_list.entity(i);
+        if entity.as_ptr().is_null() {
+            continue;
+        }
+        dbg!(entity.is_player());
     }
-    // for i in 0..entity_list.get_highest_entity_index() {
-    //     let e = entity_list.get_entity(i);
-    //     dbg!(e);
-    // }
 
-    // 28AD0560
-    //dbg!(CEntity::from_raw(dbg!(entity_list.get_entity(1) as usize)));
+    unsafe {
+        let a = &mut *c_user_cmd;
+        let mut rng = OsRng::default();
+        let old_yaw = a.view_angles.y;
+        let new_yaw = rng.gen::<f32>() * 360.0 - 180.0;
+        let delta_yaw = (new_yaw - old_yaw).to_radians();
 
-    // println!("{:?}", self_player.is_player());
+        match a.buttons {
+            EButtons::InAttack => {}
+            _ => {
+                a.view_angles.y = new_yaw;
+                a.view_angles.x = 80.0;
+            }
+        }
 
-    // let old_yaw = a.view_angles.y;
-    // let new_yaw = rng.gen::<f32>() * 360.0 - 180.0;
-    // let delta_yaw = (new_yaw - old_yaw).to_radians();
-    //
-    // a.view_angles.y = new_yaw;
-    //
-    // let forward = a.forward_move;
-    // let strafe = a.side_move;
-    // a.forward_move = delta_yaw.cos() * forward - delta_yaw.sin() * strafe;
-    // a.side_move = delta_yaw.sin() * forward + delta_yaw.cos() * strafe;
+        let forward = a.forward_move;
+        let strafe = a.side_move;
+        a.forward_move = delta_yaw.cos() * forward - delta_yaw.sin() * strafe;
+        a.side_move = delta_yaw.sin() * forward + delta_yaw.cos() * strafe;
+    }
     false
 }
 
@@ -150,18 +152,19 @@ pub extern "fastcall" fn paint_traverse(
     force_repaint: bool,
     allow_force: bool,
 ) {
+    paint_traverse_original(exc, edx, panel, force_repaint, allow_force);
+
     let interfaces = INTERFACES.get().unwrap();
     let panel_name = interfaces.vgui_panel.get_panel_name(panel);
 
     let c_str = unsafe { CStr::from_ptr(panel_name) };
     let string = c_str.to_str().unwrap();
-    if string.contains("MatSystemTopPanel") {
-        // interfaces
-        //     .vgui_surface
-        //     .draw_outlined_rect(100, 100, 200, 200);
+    if string == "MatSystemTopPanel" {
+        interfaces
+            .vgui_surface
+            .set_draw_color(Color::new_rgba(0, 255, 255, 255));
+        interfaces.vgui_surface.draw_filled_rect(100, 100, 200, 200);
     }
-
-    paint_traverse_original(exc, edx, panel, force_repaint, allow_force);
 }
 
 register_hooks!(create_move, frame_stage_notify, paint_traverse);

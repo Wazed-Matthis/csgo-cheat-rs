@@ -3,6 +3,9 @@ use std::ffi::c_void;
 use vtables::VTable;
 use vtables_derive::*;
 
+/**
+    Taken from ION lolz I am big skid :feelsbadman:
+*/
 pub type HFONT = *mut c_void;
 
 pub enum EFontFlags {

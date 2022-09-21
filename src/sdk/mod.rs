@@ -18,8 +18,5 @@ pub mod client_mode;
 pub mod engine;
 pub mod entity_list;
 pub mod global_vars;
-pub mod glow_object;
-pub mod netvars;
 pub mod panel;
-pub mod recv_props;
 pub mod surface;

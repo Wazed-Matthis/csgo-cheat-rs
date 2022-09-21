@@ -1,5 +1,5 @@
+#[derive(Debug, Clone)]
 #[repr(C)]
-#[derive(Default, Debug)]
 pub struct GlobalVars {
     pub realtime: f32,
     pub frame_count: i32,
