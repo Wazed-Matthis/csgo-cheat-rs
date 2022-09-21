@@ -3,6 +3,29 @@ use std::ffi::c_char;
 use vtables::VTable;
 use vtables_derive::{has_vtable, virtual_index, VTable};
 
+#[repr(C)]
+pub union PlayerInfoUnion {
+    xuid: i64,
+    low_high: (i32, i32),
+}
+
+#[repr(C)]
+pub struct PlayerInfo {
+    version: u32,
+    xuid: u32,
+    pub xuid_low: u32,
+    xuid_high: u32,
+    pub name: [c_char; 0x80],
+    pub user_id: i32,
+    _guid: [c_char; 0x21],
+    _friends_id: u32,
+    _friends_name: [i32; 0x80],
+    pub fake_player: bool,
+    hltv: bool,
+    _customfiles: [i32; 0x4],
+    _files_downloaded: u8,
+}
+
 #[has_vtable]
 #[derive(VTable, Debug)]
 pub struct EngineClient {}
@@ -25,4 +48,7 @@ impl EngineClient {
 
     #[virtual_index(113)]
     pub fn execute_client_command_unrestricted(&self, command: *const c_char) {}
+
+    #[virtual_index(8)]
+    pub fn player_info(&self, index: i32, player_info: &mut PlayerInfo) {}
 }

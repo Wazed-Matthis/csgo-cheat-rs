@@ -12,6 +12,7 @@ use crate::events::{EventCreateMove, EventPaintTraverse};
 use crate::features::aimbot::Aimbot;
 use crate::features::anti_aim::AntiAim;
 use crate::features::esp::ESP;
+use crate::features::watermark::Watermark;
 use crate::features::Feature;
 use hook_rs_lib::{function_hook, register_hooks};
 use log::error;
@@ -64,7 +65,7 @@ pub unsafe fn entry(module: HINSTANCE) {
         }
     }
 }
-register_features!(AntiAim, Aimbot, ESP);
+register_features!(AntiAim, Aimbot, ESP, Watermark);
 
 pub fn initialize() {
     INTERFACES.set(Interfaces::init()).unwrap();

@@ -1,4 +1,8 @@
-use crate::{feature, Color, EventPaintTraverse, Vec3, INTERFACES};
+use crate::font::FontType::{Outline, Shadow};
+use crate::sdk::engine::{PlayerInfo, PlayerInfoUnion};
+use crate::{feature, font, Color, EventPaintTraverse, Vec3, INTERFACES};
+use std::ffi::CStr;
+use std::ptr::null_mut;
 
 feature!(ESP => ESP::paint_traverse);
 
@@ -50,15 +54,49 @@ impl ESP {
                         top = top.min(point.y);
                     }
 
-                    let x = left as i32;
-                    let y = top as i32;
-                    let x1 = right as i32;
-                    let y1 = bottom as i32;
+                    let x = left;
+                    let y = top;
+                    let x1 = right;
+                    let y1 = bottom;
+
+                    interfaces
+                        .vgui_surface
+                        .set_draw_color(Color::new_rgba(0, 0, 0, 255));
+                    interfaces.vgui_surface.draw_outlined_rect(
+                        (x - 1.0) as i32,
+                        (y - 1.0) as i32,
+                        (x1 + 1.0) as i32,
+                        (y1 + 1.0) as i32,
+                    );
+                    interfaces.vgui_surface.draw_outlined_rect(
+                        (x + 1.0) as i32,
+                        (y + 1.0) as i32,
+                        (x1 - 1.0) as i32,
+                        (y1 - 1.0) as i32,
+                    );
 
                     interfaces
                         .vgui_surface
                         .set_draw_color(Color::new_rgba(255, 255, 255, 255));
-                    interfaces.vgui_surface.draw_outlined_rect(x, y, x1, y1);
+                    interfaces
+                        .vgui_surface
+                        .draw_outlined_rect(x as i32, y as i32, x1 as i32, y1 as i32);
+
+                    unsafe {
+                        let mut player_info = core::mem::zeroed();
+                        interfaces.engine.player_info(i, &mut player_info);
+
+                        let name = CStr::from_ptr(player_info.name.as_ptr()).to_str().unwrap();
+                        let bounds = font::text_bounds(name, Outline);
+
+                        font::text_center(
+                            name,
+                            x + ((x1 - x) / 2.0),
+                            y - bounds.1 as f32,
+                            Outline,
+                            Color::new_rgba(255, 255, 255, 255),
+                        );
+                    }
                 }
             }
         }
