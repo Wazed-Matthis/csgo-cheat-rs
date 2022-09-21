@@ -6,6 +6,7 @@ use log::debug;
 use vtables::VTable;
 use winapi::um::libloaderapi::{GetModuleHandleA, GetProcAddress};
 
+use crate::sdk::debug_overlay::DebugOverlay;
 use crate::sdk::panel::Panel;
 use crate::sdk::surface::Surface;
 use crate::{lpcstr, Client, EngineClient, EntityList, GlobalVars};
@@ -27,6 +28,7 @@ const LOCALIZE: &str = "Localize_001";
 const PHYS_SURFACE_PROPS: &str = "VPhysicsSurfaceProps001";
 const PREDICTION: &str = "VClientPrediction001";
 const GAME_EVENT_MGR: &str = "GAMEEVENTSMANAGER002";
+const DEBUG_OVERLAY: &str = "VDebugOverlay004";
 
 #[derive(Debug)]
 pub struct Interfaces {
@@ -37,6 +39,7 @@ pub struct Interfaces {
     pub entity_list: EntityList,
     pub engine: EngineClient,
     pub global_vars: &'static GlobalVars,
+    pub debug_overlay: DebugOverlay,
 }
 
 unsafe impl Send for Interfaces {}
@@ -58,6 +61,7 @@ impl Interfaces {
                 vgui_panel: get_interface("vgui2.dll", VGUI_PANEL),
                 entity_list: get_interface("client.dll", ENTITY_LIST),
                 vgui_surface: get_interface("vguimatsurface.dll", VGUI_SURFACE),
+                debug_overlay: get_interface("engine.dll", DEBUG_OVERLAY),
             }
         }
     }

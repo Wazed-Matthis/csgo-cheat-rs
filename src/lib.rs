@@ -23,7 +23,7 @@ use winapi::um::winnt::DLL_PROCESS_ATTACH;
 use winapi::um::winuser::{GetAsyncKeyState, VK_END};
 
 use crate::interface::Interfaces;
-use crate::sdk::classes::{CUserCMD, EButtons};
+use crate::sdk::classes::{CUserCMD, EButtons, Vec3};
 use crate::sdk::client::Client;
 use crate::sdk::engine::EngineClient;
 use crate::sdk::entity_list::EntityList;
@@ -32,6 +32,7 @@ use crate::sdk::surface::Color;
 
 pub mod interface;
 pub mod macros;
+pub mod memory;
 pub mod sdk;
 mod source_api;
 
@@ -94,14 +95,6 @@ pub extern "fastcall" fn create_move(
         return create_move_original(ecx, edx, flt_sampletime, c_user_cmd);
     }
 
-    for i in 0..interfaces.global_vars.max_clients {
-        let entity = interfaces.entity_list.entity(i);
-        if entity.as_ptr().is_null() {
-            continue;
-        }
-        dbg!(entity.is_player());
-    }
-
     unsafe {
         let a = &mut *c_user_cmd;
         let mut rng = OsRng::default();
@@ -113,7 +106,7 @@ pub extern "fastcall" fn create_move(
             EButtons::InAttack => {}
             _ => {
                 a.view_angles.y = new_yaw;
-                a.view_angles.x = 80.0;
+                a.view_angles.x = 89.0;
             }
         }
 
@@ -164,6 +157,65 @@ pub extern "fastcall" fn paint_traverse(
             .vgui_surface
             .set_draw_color(Color::new_rgba(0, 255, 255, 255));
         interfaces.vgui_surface.draw_filled_rect(100, 100, 200, 200);
+
+        for i in 0..interfaces.global_vars.max_clients {
+            let entity = interfaces.entity_list.entity(i);
+            if let Some(ent) = entity.get() {
+                let collidable = ent.collidable();
+                if let Some(col) = collidable.get() {
+                    let origin = ent.abs_origin();
+                    let obb_mins = col.min().clone();
+                    let obb_maxs = col.max().clone();
+                    #[rustfmt::skip]
+                    let points = vec![
+                        Vec3 {x: obb_mins.x, y: obb_mins.y, z: obb_mins.z},
+                        Vec3 {x: obb_mins.x, y: obb_maxs.y, z: obb_mins.z},
+                        Vec3 {x: obb_maxs.x, y: obb_maxs.y, z: obb_mins.z},
+                        Vec3 {x: obb_maxs.x, y: obb_mins.y, z: obb_mins.z},
+                        Vec3 {x: obb_maxs.x, y: obb_maxs.y, z: obb_maxs.z},
+                        Vec3 {x: obb_mins.x, y: obb_maxs.y, z: obb_maxs.z},
+                        Vec3 {x: obb_mins.x, y: obb_mins.y, z: obb_maxs.z},
+                        Vec3 {x: obb_maxs.x, y: obb_mins.y, z: obb_maxs.z}
+                    ];
+
+                    let projected_points: Vec<Vec3> = points
+                        .iter()
+                        .map(|point| {
+                            let mut contextualized = point.clone() + origin.clone();
+                            let mut projected = contextualized.clone();
+                            interfaces
+                                .debug_overlay
+                                .world_to_screen(&mut contextualized, &mut projected);
+                            projected
+                        })
+                        .collect();
+
+                    let mut left = projected_points[0].x;
+                    let mut bottom = projected_points[0].y;
+                    let mut right = projected_points[0].x;
+                    let mut top = projected_points[0].y;
+
+                    for point in projected_points {
+                        left = left.min(point.x);
+                        bottom = bottom.max(point.y);
+                        right = right.max(point.x);
+                        top = top.min(point.y);
+                    }
+
+                    let x = left as i32;
+                    let y = top as i32;
+                    let w = (right - left) as i32;
+                    let h = (bottom - top) as i32;
+
+                    interfaces
+                        .vgui_surface
+                        .set_draw_color(Color::new_rgba(255, 255, 255, 255));
+                    interfaces
+                        .vgui_surface
+                        .draw_outlined_rect(x, y, right as i32, bottom as i32);
+                }
+            }
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 use std::ffi::c_float;
+use std::ops::Add;
 
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(i32)]
@@ -37,12 +38,24 @@ pub struct CUserCMD {
     pub pad: [u8; 0x18],
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 #[repr(C)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
     pub z: f32,
+}
+
+impl Add for Vec3 {
+    type Output = Vec3;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Vec3 {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

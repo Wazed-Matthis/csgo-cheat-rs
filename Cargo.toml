@@ -13,7 +13,6 @@ pretty_env_logger = "0.4.0"
 log = "0.4.17"
 once_cell = "1.13.1"
 rand = "0.8.5"
-csgo-sdk-sys = { path = "../csgo-sdk-sys" }
 hook-rs-lib = { path = "../hook-rs/hook-rs-lib", features = ["derive"] }
 vtables = { path = "../vtables" }
 vtables_derive = { path = "../vtables_derive" }
