@@ -1,20 +1,22 @@
+use bitflags::bitflags;
 use std::ffi::c_float;
 use std::ops::Add;
 
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
-#[repr(i32)]
-pub enum EButtons {
-    InAttack = 1 << 0,
-    InJump = 1 << 1,
-    InDuck = 1 << 2,
-    InForward = 1 << 3,
-    InBack = 1 << 4,
-    InUse = 1 << 5,
-    InMoveleft = 1 << 9,
-    InMoveright = 1 << 10,
-    InAttack2 = 1 << 11,
-    InScore = 1 << 16,
-    InBullrush = 1 << 22,
+bitflags! {
+    #[repr(C)]
+    pub struct EButtons: i32 {
+        const InAttack = 1 << 0;
+        const InJump = 1 << 1;
+        const InDuck = 1 << 2;
+        const InForward = 1 << 3;
+        const InBack = 1 << 4;
+        const InUse = 1 << 5;
+        const InMoveleft = 1 << 9;
+        const InMoveright = 1 << 10;
+        const InAttack2 = 1 << 11;
+        const InScore = 1 << 16;
+        const InBullrush = 1 << 22;
+    }
 }
 
 #[repr(C)]

@@ -27,7 +27,7 @@ use winapi::um::winnt::DLL_PROCESS_ATTACH;
 use winapi::um::winuser::{GetAsyncKeyState, VK_END};
 
 use crate::interface::Interfaces;
-use crate::sdk::classes::{CUserCMD, EButtons, Vec3};
+use crate::sdk::classes::{CUserCMD, Vec3};
 use crate::sdk::client::Client;
 use crate::sdk::engine::EngineClient;
 use crate::sdk::entity_list::EntityList;

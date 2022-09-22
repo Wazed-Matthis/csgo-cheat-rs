@@ -1,4 +1,5 @@
-use crate::{feature, EButtons, EventCreateMove, OsRng};
+use crate::sdk::classes::EButtons;
+use crate::{feature, EventCreateMove, OsRng};
 use rand::Rng;
 
 feature!(AntiAim => AntiAim::on_create_move);
@@ -12,12 +13,10 @@ impl AntiAim {
             let new_yaw = rng.gen::<f32>() * 360.0 - 180.0;
             let delta_yaw = (new_yaw - old_yaw).to_radians();
 
-            match a.buttons {
-                EButtons::InAttack => {}
-                _ => {
-                    a.view_angles.y = new_yaw;
-                    a.view_angles.x = 89.0;
-                }
+            // Check if the in_attack button is currently being pressed, if not, set the antiAim yaw
+            if a.buttons.contains(EButtons::InAttack) {
+                a.view_angles.x = 89f32;
+                a.view_angles.y = new_yaw;
             }
 
             let forward = a.forward_move;
