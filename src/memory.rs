@@ -24,6 +24,9 @@ impl<T: VTable> NotNull<T> {
     }
 }
 
+/// # Safety
+///
+/// This is not safe lmao
 pub unsafe fn read<T>(address: usize) -> T {
     core::ptr::read::<T>(address as *const T)
 }

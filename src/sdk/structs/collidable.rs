@@ -1,9 +1,7 @@
-use rand::distributions::Slice;
 use vtables::VTable;
 use vtables_derive::{has_vtable, virtual_index, VTable};
 
-use crate::memory::NotNull;
-use crate::sdk::classes::{Vec3};
+use crate::sdk::classes::Vec3;
 
 #[has_vtable]
 #[derive(VTable, Debug)]

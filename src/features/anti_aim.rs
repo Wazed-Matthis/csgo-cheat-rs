@@ -14,7 +14,7 @@ impl AntiAim {
             let delta_yaw = (new_yaw - old_yaw).to_radians();
 
             // Check if the in_attack button is currently being pressed, if not, set the antiAim yaw
-            if a.buttons.contains(EButtons::InAttack) {
+            if a.buttons.contains(EButtons::ATTACK) {
                 a.view_angles.x = 89f32;
                 a.view_angles.y = new_yaw;
             }

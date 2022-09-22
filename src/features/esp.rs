@@ -1,8 +1,6 @@
-use crate::font::FontType::{Outline, Shadow};
-use crate::sdk::engine::{PlayerInfo, PlayerInfoUnion};
+use crate::font::FontType::{Outline};
 use crate::{feature, font, Color, EventPaintTraverse, Vec3, INTERFACES};
 use std::ffi::CStr;
-use std::ptr::null_mut;
 
 feature!(ESP => ESP::paint_traverse);
 

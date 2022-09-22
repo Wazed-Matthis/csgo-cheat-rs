@@ -1,21 +1,20 @@
 use bitflags::bitflags;
-use std::ffi::c_float;
 use std::ops::Add;
 
 bitflags! {
     #[repr(C)]
     pub struct EButtons: i32 {
-        const InAttack = 1 << 0;
-        const InJump = 1 << 1;
-        const InDuck = 1 << 2;
-        const InForward = 1 << 3;
-        const InBack = 1 << 4;
-        const InUse = 1 << 5;
-        const InMoveleft = 1 << 9;
-        const InMoveright = 1 << 10;
-        const InAttack2 = 1 << 11;
-        const InScore = 1 << 16;
-        const InBullrush = 1 << 22;
+        const ATTACK = 1 << 0;
+        const JUMP = 1 << 1;
+        const DUCK = 1 << 2;
+        const FORWARD = 1 << 3;
+        const BACK = 1 << 4;
+        const USE = 1 << 5;
+        const MOVE_LEFT = 1 << 9;
+        const MOVE_RIGHT = 1 << 10;
+        const ATTACK2= 1 << 11;
+        const SCORE = 1 << 16;
+        const BULL_RUSH = 1 << 22;
     }
 }
 

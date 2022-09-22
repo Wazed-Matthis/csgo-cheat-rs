@@ -1,10 +1,7 @@
-use crate::sdk::surface::EFontFlags::FontflagOutline;
 use crate::sdk::surface::HFONT;
 use crate::{lpcstr, Color, INTERFACES};
-use std::ffi::{CStr, OsStr};
+use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
-use std::str::FromStr;
-use winapi::ctypes::wchar_t;
 
 /// # Safety
 /// This is safe because setup fonts will always be called before using fonts
@@ -113,6 +110,6 @@ pub fn text_bounds(text: &str, font_type: FontType) -> (i32, i32) {
         interfaces
             .vgui_surface
             .text_size(font_id as HFONT, ptr, &mut width, &mut height);
-        return (width, height);
+        (width, height)
     }
 }

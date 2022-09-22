@@ -4,7 +4,6 @@ extern crate core;
 
 use event_bus::{dispatch_event, EventBus};
 use std::ffi::{c_char, c_float, c_void, CStr};
-use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use std::{mem, ptr};
 

@@ -1,8 +1,7 @@
+use crate::memory::NotNull;
+use crate::sdk::structs::entities::CEntity;
 use vtables::VTable;
 use vtables_derive::{has_vtable, virtual_index, VTable};
-use crate::memory::NotNull;
-use crate::sdk::classes::Vec3;
-use crate::sdk::structs::entities::CEntity;
 
 #[has_vtable]
 #[derive(VTable, Debug)]

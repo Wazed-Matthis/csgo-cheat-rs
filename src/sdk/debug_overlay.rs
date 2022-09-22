@@ -1,5 +1,3 @@
-use std::ffi::c_char;
-
 use crate::Vec3;
 use vtables::VTable;
 use vtables_derive::{has_vtable, virtual_index, VTable};

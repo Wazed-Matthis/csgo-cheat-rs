@@ -1,5 +1,5 @@
-use std::ffi::{c_char, c_int, c_void, CStr};
-use std::mem::{size_of, transmute, MaybeUninit};
+use std::ffi::{c_char, c_int, c_void};
+use std::mem::transmute;
 use std::ptr::null_mut;
 
 use log::debug;
@@ -16,18 +16,18 @@ const ENTITY_LIST: &str = "VClientEntityList003";
 const ENGINE: &str = "VEngineClient014";
 const VGUI_PANEL: &str = "VGUI_Panel009";
 const VGUI_SURFACE: &str = "VGUI_Surface031";
-const INPUT_SYSTEM: &str = "InputSystemVersion001";
-const RENDER_VIEW: &str = "VEngineRenderView014";
-const CVAR: &str = "VEngineCvar007";
-const ENGINE_TRACE: &str = "EngineTraceClient004";
-const ENGINE_SOUND: &str = "IEngineSoundClient003";
-const MAT_SYSTEM: &str = "VMaterialSystem080";
-const MODEL_RENDER: &str = "VEngineModel016";
-const MODEL_INFO: &str = "VModelInfoClient004";
-const LOCALIZE: &str = "Localize_001";
-const PHYS_SURFACE_PROPS: &str = "VPhysicsSurfaceProps001";
-const PREDICTION: &str = "VClientPrediction001";
-const GAME_EVENT_MGR: &str = "GAMEEVENTSMANAGER002";
+const _INPUT_SYSTEM: &str = "InputSystemVersion001";
+const _RENDER_VIEW: &str = "VEngineRenderView014";
+const _CVAR: &str = "VEngineCvar007";
+const _ENGINE_TRACE: &str = "EngineTraceClient004";
+const _ENGINE_SOUND: &str = "IEngineSoundClient003";
+const _MAT_SYSTEM: &str = "VMaterialSystem080";
+const _MODEL_RENDER: &str = "VEngineModel016";
+const _MODEL_INFO: &str = "VModelInfoClient004";
+const _LOCALIZE: &str = "Localize_001";
+const _PHYS_SURFACE_PROPS: &str = "VPhysicsSurfaceProps001";
+const _PREDICTION: &str = "VClientPrediction001";
+const _GAME_EVENT_MGR: &str = "GAMEEVENTSMANAGER002";
 const DEBUG_OVERLAY: &str = "VDebugOverlay004";
 
 #[derive(Debug)]
