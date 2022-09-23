@@ -1,4 +1,4 @@
-use crate::font::FontType::{Outline};
+use crate::font::FontType::Outline;
 use crate::{feature, font, Color, EventPaintTraverse, Vec3, INTERFACES};
 use std::ffi::CStr;
 
@@ -16,8 +16,9 @@ impl ESP {
                     let origin = ent.abs_origin();
                     let mins = col.min().clone();
                     let maxs = col.max().clone();
+                    // Define all bounding box edges
                     #[rustfmt::skip]
-                        let points = vec![
+                    let points = vec![
                         Vec3 {x: mins.x, y: mins.y, z: mins.z},
                         Vec3 {x: mins.x, y: maxs.y, z: mins.z},
                         Vec3 {x: maxs.x, y: maxs.y, z: mins.z},
@@ -28,7 +29,8 @@ impl ESP {
                         Vec3 {x: maxs.x, y: mins.y, z: maxs.z}
                     ];
 
-                    let projected_points: Vec<Vec3> = points
+                    // Project all bounding box points to screen
+                    let screen_points: Vec<Vec3> = points
                         .iter()
                         .map(|point| {
                             let mut contextualized = point.clone() + origin.clone();
@@ -40,12 +42,13 @@ impl ESP {
                         })
                         .collect();
 
-                    let mut left = projected_points[0].x;
-                    let mut bottom = projected_points[0].y;
-                    let mut right = projected_points[0].x;
-                    let mut top = projected_points[0].y;
+                    let mut left = screen_points[0].x;
+                    let mut bottom = screen_points[0].y;
+                    let mut right = screen_points[0].x;
+                    let mut top = screen_points[0].y;
 
-                    for point in projected_points {
+                    // Validate the world_to_screen result
+                    for point in screen_points {
                         left = left.min(point.x);
                         bottom = bottom.max(point.y);
                         right = right.max(point.x);
@@ -57,6 +60,7 @@ impl ESP {
                     let x1 = right;
                     let y1 = bottom;
 
+                    // Draw box outline
                     interfaces
                         .vgui_surface
                         .set_draw_color(Color::new_rgba(0, 0, 0, 255));
@@ -73,6 +77,7 @@ impl ESP {
                         (y1 - 1.0) as i32,
                     );
 
+                    // Draw box inner
                     interfaces
                         .vgui_surface
                         .set_draw_color(Color::new_rgba(255, 255, 255, 255));
@@ -80,6 +85,7 @@ impl ESP {
                         .vgui_surface
                         .draw_outlined_rect(x as i32, y as i32, x1 as i32, y1 as i32);
 
+                    // Draw name
                     unsafe {
                         let mut player_info = core::mem::zeroed();
                         interfaces.engine.player_info(i, &mut player_info);

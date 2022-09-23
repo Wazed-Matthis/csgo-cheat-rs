@@ -4,27 +4,6 @@ use vtables::VTable;
 use vtables_derive::*;
 use winapi::ctypes::wchar_t;
 
-/**
-    Taken from ION lolz I am big skid :feelsbadman:
-*/
-pub type HFONT = *mut c_void;
-
-pub enum EFontFlags {
-    FontflagNone,
-    FontflagItalic = 0x001,
-    FontflagUnderline = 0x002,
-    FontflagStrikeout = 0x004,
-    FontflagSymbol = 0x008,
-    FontflagAntialias = 0x010,
-    FontflagGaussianblur = 0x020,
-    FontflagRotary = 0x040,
-    FontflagDropshadow = 0x080,
-    FontflagAdditive = 0x100,
-    FontflagOutline = 0x200,
-    FontflagCustom = 0x400,
-    FontflagBitmap = 0x800,
-}
-
 #[derive(Clone, Copy)]
 pub enum GradientType {
     GradientHorizontal = 0,
