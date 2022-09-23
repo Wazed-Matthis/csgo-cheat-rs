@@ -1,5 +1,6 @@
 use std::ffi::{c_char, c_void};
 
+use crate::font::HFONT;
 use vtables::VTable;
 use vtables_derive::*;
 use winapi::ctypes::wchar_t;

@@ -11,7 +11,7 @@ impl ESP {
         for i in 0..interfaces.global_vars.max_clients {
             let entity = interfaces.entity_list.entity(i);
             if let Some(ent) = entity.get() {
-                if (ent.health() > 0) {
+                if ent.health() > 0 {
                     let collidable = ent.collidable();
                     if let Some(col) = collidable.get() {
                         let origin = ent.abs_origin();
@@ -19,16 +19,16 @@ impl ESP {
                         let maxs = col.max().clone();
                         // Define all bounding box edges
                         #[rustfmt::skip]
-                    let points = vec![
-                        Vec3 {x: mins.x, y: mins.y, z: mins.z},
-                        Vec3 {x: mins.x, y: maxs.y, z: mins.z},
-                        Vec3 {x: maxs.x, y: maxs.y, z: mins.z},
-                        Vec3 {x: maxs.x, y: mins.y, z: mins.z},
-                        Vec3 {x: maxs.x, y: maxs.y, z: maxs.z},
-                        Vec3 {x: mins.x, y: maxs.y, z: maxs.z},
-                        Vec3 {x: mins.x, y: mins.y, z: maxs.z},
-                        Vec3 {x: maxs.x, y: mins.y, z: maxs.z}
-                    ];
+                        let points = vec![
+                            Vec3 {x: mins.x, y: mins.y, z: mins.z},
+                            Vec3 {x: mins.x, y: maxs.y, z: mins.z},
+                            Vec3 {x: maxs.x, y: maxs.y, z: mins.z},
+                            Vec3 {x: maxs.x, y: mins.y, z: mins.z},
+                            Vec3 {x: maxs.x, y: maxs.y, z: maxs.z},
+                            Vec3 {x: mins.x, y: maxs.y, z: maxs.z},
+                            Vec3 {x: mins.x, y: mins.y, z: maxs.z},
+                            Vec3 {x: maxs.x, y: mins.y, z: maxs.z}
+                        ];
 
                         // Project all bounding box points to screen
                         let screen_points: Vec<Vec3> = points

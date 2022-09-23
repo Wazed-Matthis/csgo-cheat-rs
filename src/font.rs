@@ -1,24 +1,27 @@
 use crate::{lpcstr, Color, INTERFACES};
+use bitflags::bitflags;
 use once_cell::sync::OnceCell;
-use std::ffi::OsStr;
+use std::ffi::{c_void, OsStr};
 use std::os::windows::ffi::OsStrExt;
 
 pub type HFONT = *mut c_void;
 
-pub enum FontFlags {
-    FontflagNone = 0x000,
-    FontflagItalic = 0x001,
-    FontflagUnderline = 0x002,
-    FontflagStrikeout = 0x004,
-    FontflagSymbol = 0x008,
-    FontflagAntialias = 0x010,
-    FontflagGaussianblur = 0x020,
-    FontflagRotary = 0x040,
-    FontflagDropshadow = 0x080,
-    FontflagAdditive = 0x100,
-    FontflagOutline = 0x200,
-    FontflagCustom = 0x400,
-    FontflagBitmap = 0x800,
+bitflags! {
+    pub struct FontFlags: i32 {
+        const NONE = 0x000;
+        const ITALIC = 0x001;
+        const UNDERLINE = 0x002;
+        const STRIKEOUT = 0x004;
+        const SYMBOL = 0x008;
+        const ANTI_ALIAS = 0x010;
+        const GAUSSIAN_BLUR = 0x020;
+        const ROTARY = 0x040;
+        const DROP_SHADOW = 0x080;
+        const ADDITIVE = 0x100;
+        const OUTLINE = 0x200;
+        const CUSTOM = 0x400;
+        const BITMAP = 0x800;
+    }
 }
 
 /// # Safety
@@ -31,7 +34,7 @@ pub fn setup_fonts() {
 
     // Set the default outlined font
     let outline = interfaces.vgui_surface.create_font();
-    OUTLINE.set(outline);
+    OUTLINE.set(outline).expect("Outline font already set.");
     interfaces.vgui_surface.font_glyph(
         outline as HFONT,
         lpcstr!("Tahoma"),
@@ -39,14 +42,14 @@ pub fn setup_fonts() {
         500,
         0,
         0,
-        FontFlags::FontflagOutline,
+        FontFlags::OUTLINE.bits(),
         0,
         0,
     );
 
     // Set the default shadowed font
     let shadow = interfaces.vgui_surface.create_font();
-    SHADOW.set(shadow);
+    SHADOW.set(shadow).expect("Shadow font already set.");
     interfaces.vgui_surface.font_glyph(
         shadow as HFONT,
         lpcstr!("Tahoma"),
@@ -54,7 +57,7 @@ pub fn setup_fonts() {
         500,
         0,
         0,
-        FontFlags::FontflagAntialias | FontFlags::FontflagDropshadow,
+        (FontFlags::ANTI_ALIAS | FontFlags::DROP_SHADOW).bits(),
         0,
         0,
     );
@@ -130,7 +133,7 @@ pub fn text_bounds(text: &str, font_type: FontType) -> (i32, i32) {
 }
 
 fn font_by_type(font_type: FontType) -> u64 {
-    match font_type {
+    *match font_type {
         FontType::Outline => OUTLINE.get().unwrap(),
         FontType::Shadow => SHADOW.get().unwrap(),
     }
