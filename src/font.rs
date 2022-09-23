@@ -30,9 +30,10 @@ pub fn setup_fonts() {
     let interfaces = INTERFACES.get().unwrap();
 
     // Set the default outlined font
-    OUTLINE.set(interfaces.vgui_surface.create_font());
+    let outline = interfaces.vgui_surface.create_font();
+    OUTLINE.set(outline);
     interfaces.vgui_surface.font_glyph(
-        OUTLINE as HFONT,
+        outline as HFONT,
         lpcstr!("Tahoma"),
         12,
         500,
@@ -44,9 +45,10 @@ pub fn setup_fonts() {
     );
 
     // Set the default shadowed font
-    SHADOW.set(interfaces.vgui_surface.create_font());
+    let shadow = interfaces.vgui_surface.create_font();
+    SHADOW.set(shadow);
     interfaces.vgui_surface.font_glyph(
-        SHADOW as HFONT,
+        shadow as HFONT,
         lpcstr!("Tahoma"),
         12,
         500,
