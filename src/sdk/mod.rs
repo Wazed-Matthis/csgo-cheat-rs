@@ -3,6 +3,7 @@ pub mod client;
 pub mod client_mode;
 pub mod debug_overlay;
 pub mod engine;
+pub mod engine_prediction;
 pub mod entity_list;
 pub mod global_vars;
 pub mod panel;

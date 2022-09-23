@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_void};
+use std::ffi::c_char;
 
 use crate::font::HFONT;
 use vtables::VTable;
