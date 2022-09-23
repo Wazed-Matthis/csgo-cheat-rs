@@ -5,7 +5,7 @@ use std::os::windows::ffi::OsStrExt;
 
 pub type HFONT = *mut c_void;
 
-pub enum EFontFlags {
+pub enum FontFlags {
     FontflagNone = 0x000,
     FontflagItalic = 0x001,
     FontflagUnderline = 0x002,
@@ -39,7 +39,7 @@ pub fn setup_fonts() {
         500,
         0,
         0,
-        EFontFlags::FontflagOutline,
+        FontFlags::FontflagOutline,
         0,
         0,
     );
@@ -54,7 +54,7 @@ pub fn setup_fonts() {
         500,
         0,
         0,
-        EFontFlags::FontflagAntialias | EFontFlags::FontflagDropshadow,
+        FontFlags::FontflagAntialias | FontFlags::FontflagDropshadow,
         0,
         0,
     );
