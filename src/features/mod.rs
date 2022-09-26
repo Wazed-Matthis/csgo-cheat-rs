@@ -25,6 +25,7 @@ macro_rules! feature {
                 $(
                     event_bus::subscribe_event("main", $event, 1);
                 )*
+
                 Self
             }
 
@@ -38,7 +39,7 @@ macro_rules! feature {
 
 #[macro_export]
 macro_rules! register_features {
-    ($($feature:ident),*) => {
+    ($($setting:ident => $feature:ident{$($setting_name:ident: $setting_type:ty),*}),*) => {
         static FEATURES: once_cell::sync::OnceCell<Vec<Box<dyn crate::features::Feature>>> = once_cell::sync::OnceCell::new();
 
         pub fn init_features(){
@@ -46,5 +47,19 @@ macro_rules! register_features {
                 vec![$(Box::new($feature::new())),*]
             });
         }
+
+        use serde::{Serialize, Deserialize};
+
+        #[derive(Serialize, Deserialize, Clone, Debug)]
+        pub struct FeatureSettings{
+            $($feature: $setting),*
+        }
+
+        $(
+            #[derive(Serialize, Deserialize, Clone, Debug)]
+            pub struct $setting{
+                $($setting_name: $setting_type),*
+            }
+        )*
     };
 }

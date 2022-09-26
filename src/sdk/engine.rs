@@ -2,6 +2,7 @@ use std::ffi::c_char;
 
 use vtables::VTable;
 use vtables_derive::{has_vtable, virtual_index, VTable};
+use crate::Vec3;
 
 #[repr(C)]
 pub union PlayerInfoUnion {
@@ -51,4 +52,7 @@ impl EngineClient {
 
     #[virtual_index(8)]
     pub fn player_info(&self, index: i32, player_info: &mut PlayerInfo) {}
+
+    #[virtual_index(18)]
+    pub fn get_view_angles(&self, angles: &mut Vec3) {}
 }

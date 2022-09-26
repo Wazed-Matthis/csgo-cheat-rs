@@ -1,0 +1,13 @@
+{
+  "name": "default",
+  "version": 1,
+  "author": "Wazed",
+  "features": {
+    "Aimbot": {
+      "fov": 360,
+      "min_damage": 10
+    },
+    "ESP": {},
+    "Watermark": {}
+  }
+}

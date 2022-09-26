@@ -11,9 +11,11 @@ crate-type = ["cdylib"]
 [dependencies]
 winapi = { version = "0.3.9", features = ["ntdef", "psapi", "minwindef", "memoryapi", "wincon", "libloaderapi", "minwinbase", "winnt", "ntstatus", "consoleapi", "winuser"] }
 hook-rs-lib = { path = "../hook-rs/hook-rs-lib", features = ["derive"] }
+serde = { version = "1.0.145", features = ["derive"]}
 vtables_derive = { path = "../vtables_derive" }
 vtables = { path = "../vtables" }
 pretty_env_logger = "0.4.0"
+serde_json = "1.0.85"
 once_cell = "1.13.1"
 event-bus = "0.1.0"
 bitflags = "1.3.2"

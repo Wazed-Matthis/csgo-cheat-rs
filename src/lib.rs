@@ -2,17 +2,13 @@
 
 extern crate core;
 
-use event_bus::{dispatch_event, EventBus};
 use std::ffi::{c_char, c_float, c_void, CStr};
+use std::fs::File;
+use std::io::Read;
 use std::time::Duration;
 use std::{mem, ptr};
 
-use crate::events::{EventCreateMove, EventPaintTraverse};
-use crate::features::aimbot::Aimbot;
-use crate::features::anti_aim::AntiAim;
-use crate::features::esp::ESP;
-use crate::features::watermark::Watermark;
-use crate::features::Feature;
+use event_bus::{dispatch_event, EventBus};
 use hook_rs_lib::{function_hook, register_hooks};
 use log::error;
 use once_cell::sync::OnceCell;
@@ -25,6 +21,12 @@ use winapi::um::wincon::FreeConsole;
 use winapi::um::winnt::DLL_PROCESS_ATTACH;
 use winapi::um::winuser::{GetAsyncKeyState, VK_END};
 
+use crate::config::Configuration;
+use crate::events::{EventCreateMove, EventPaintTraverse};
+use crate::features::aimbot::Aimbot;
+use crate::features::esp::ESP;
+use crate::features::watermark::Watermark;
+use crate::features::Feature;
 use crate::interface::Interfaces;
 use crate::sdk::classes::{CUserCMD, Vec3};
 use crate::sdk::client::Client;
@@ -33,17 +35,21 @@ use crate::sdk::entity_list::EntityList;
 use crate::sdk::global_vars::GlobalVars;
 use crate::sdk::surface::Color;
 
+pub mod config;
 pub mod events;
 pub mod features;
 pub mod font;
 pub mod interface;
 pub mod macros;
 pub mod memory;
+pub mod netvar;
 pub mod sdk;
 pub mod source_api;
 
 static INTERFACES: OnceCell<Interfaces> = OnceCell::new();
 static MAIN_BUS: OnceCell<EventBus> = OnceCell::new();
+
+static CONFIG: OnceCell<Configuration> = OnceCell::new();
 
 /// # Safety
 /// This is not safe at all, we just need this to not get clippy warnings
@@ -54,6 +60,7 @@ pub unsafe fn entry(module: HINSTANCE) {
     initialize();
     init_hooks();
     font::setup_fonts();
+    netvar::scan_netvars();
     loop {
         std::thread::sleep(Duration::from_millis(5));
         if GetAsyncKeyState(VK_END) != 0 {
@@ -64,10 +71,25 @@ pub unsafe fn entry(module: HINSTANCE) {
         }
     }
 }
-register_features!(AntiAim, Aimbot, ESP, Watermark);
+register_features!(
+    AimbotSettings => Aimbot {
+        min_damage: f32,
+        fov: f32
+    },
+    ESPSettings => ESP {},
+    WatermarkSettings => Watermark {}
+);
 
 pub fn initialize() {
     INTERFACES.set(Interfaces::init()).unwrap();
+    let mut config_string = String::new();
+    File::open("C:/Users/matth/CLionProjects/csgo-cheat-rs/config.json")
+        .unwrap()
+        .read_to_string(&mut config_string)
+        .unwrap();
+    let config =
+        serde_json::from_str::<Configuration>(&config_string).expect("Failed to parse config_file");
+    CONFIG.set(config).unwrap();
     let is_err = MAIN_BUS.set(EventBus::new("main")).is_err();
     if is_err {
         error!("Failed to initialize main event bus");
@@ -108,7 +130,18 @@ pub extern "fastcall" fn create_move(
     if user_cmd.is_null() || !interfaces.engine.is_in_game() {
         return create_move_original(ecx, edx, flt_sampletime, user_cmd);
     }
+
+    let a = unsafe { &mut *user_cmd };
+    let old_view_angle = a.view_angles.clone();
+
     dispatch_event("main", &mut EventCreateMove { user_cmd });
+
+    let delta_yaw = (a.view_angles.y - old_view_angle.y).to_radians();
+    let forward = a.forward_move;
+    let strafe = a.side_move;
+    a.forward_move = delta_yaw.cos() * forward - delta_yaw.sin() * strafe;
+    a.side_move = delta_yaw.sin() * forward + delta_yaw.cos() * strafe;
+
     false
 }
 

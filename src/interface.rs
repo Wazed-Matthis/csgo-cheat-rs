@@ -10,6 +10,7 @@ use crate::sdk::debug_overlay::DebugOverlay;
 use crate::sdk::engine_prediction::Prediction;
 use crate::sdk::panel::Panel;
 use crate::sdk::surface::Surface;
+use crate::sdk::trace::EngineTrace;
 use crate::{lpcstr, Client, EngineClient, EntityList, GlobalVars};
 
 const CLIENT: &str = "VClient018";
@@ -20,7 +21,7 @@ const VGUI_SURFACE: &str = "VGUI_Surface031";
 const _INPUT_SYSTEM: &str = "InputSystemVersion001";
 const _RENDER_VIEW: &str = "VEngineRenderView014";
 const _CVAR: &str = "VEngineCvar007";
-const _ENGINE_TRACE: &str = "EngineTraceClient004";
+const ENGINE_TRACE: &str = "EngineTraceClient004";
 const _ENGINE_SOUND: &str = "IEngineSoundClient003";
 const _MAT_SYSTEM: &str = "VMaterialSystem080";
 const _MODEL_RENDER: &str = "VEngineModel016";
@@ -42,6 +43,7 @@ pub struct Interfaces {
     pub global_vars: &'static GlobalVars,
     pub debug_overlay: DebugOverlay,
     pub prediction: Prediction,
+    pub trace: EngineTrace,
 }
 
 unsafe impl Send for Interfaces {}
@@ -64,13 +66,12 @@ impl Interfaces {
                 entity_list: get_interface("client.dll", ENTITY_LIST),
                 vgui_surface: get_interface("vguimatsurface.dll", VGUI_SURFACE),
                 debug_overlay: get_interface("engine.dll", DEBUG_OVERLAY),
-                prediction: get_interface("engine.dll", PREDICTION),
+                prediction: get_interface("client.dll", PREDICTION),
+                trace: get_interface("engine.dll", ENGINE_TRACE),
             }
         }
     }
 }
-
-///
 /// # Safety
 /// This function is safe if the given interface and the module are valid.
 /// Otherwise the function will crash and throw an access violation because of accessing a null pointer

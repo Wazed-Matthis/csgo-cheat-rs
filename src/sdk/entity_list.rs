@@ -1,7 +1,8 @@
-use crate::memory::NotNull;
-use crate::sdk::structs::entities::CEntity;
 use vtables::VTable;
 use vtables_derive::{has_vtable, virtual_index, VTable};
+
+use crate::memory::NotNull;
+use crate::sdk::structs::entities::CEntity;
 
 #[has_vtable]
 #[derive(VTable, Debug)]
@@ -10,6 +11,15 @@ pub struct EntityList {}
 impl EntityList {
     #[virtual_index(3)]
     pub fn entity(&self, index: i32) -> NotNull<CEntity> {}
+
+    pub fn get_entity_from_handle<T: VTable>(&self, handle: i32) -> Option<T> {
+        self.get_entity_from_handle_virtual(handle)
+            .get()
+            .map(|entity| unsafe { T::new(entity.as_ptr() as _) })
+    }
+
+    #[virtual_index(4)]
+    pub fn get_entity_from_handle_virtual(&self, handle: i32) -> NotNull<CEntity> {}
 
     #[virtual_index(5)]
     pub fn number_of_entities(&self, include_networkable: bool) -> i32 {}
