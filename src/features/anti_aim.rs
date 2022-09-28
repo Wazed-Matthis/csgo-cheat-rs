@@ -1,6 +1,7 @@
-use crate::sdk::classes::EButtons;
-use crate::{feature, EventCreateMove, OsRng};
 use rand::Rng;
+
+use crate::sdk::classes::EButtons;
+use crate::{feature, EventCreateMove, OsRng, CONFIG};
 
 feature!(AntiAim => AntiAim::on_create_move);
 
@@ -13,7 +14,8 @@ impl AntiAim {
 
             // Check if the in_attack button is currently being pressed, if not, set the antiAim yaw
             if a.buttons.contains(EButtons::ATTACK) {
-                a.view_angles.x = 89f32;
+                let guard = CONFIG.get().unwrap();
+                a.view_angles.x = guard.features.AntiAim.pitch;
                 a.view_angles.y = new_yaw;
             }
         }

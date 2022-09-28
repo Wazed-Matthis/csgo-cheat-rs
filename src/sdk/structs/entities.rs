@@ -1,11 +1,19 @@
+use std::cmp::max;
+use std::ffi::{c_int, c_void};
+use std::mem;
+use std::mem::size_of;
+
+use log::{debug, error};
 use vtables::VTable;
 use vtables_derive::{has_vtable, virtual_index, VTable};
 
 use crate::memory::NotNull;
-use crate::sdk::classes::{Vec2, Vec3};
+use crate::sdk::classes::{Matrix3x4, Matrix4x3, Vec2, Vec3};
 use crate::sdk::structs::collidable::Collidable;
 use crate::sdk::structs::weapon::Weapon;
-use crate::{get_interfaces, netvar};
+use crate::{get_interfaces, netvar, Client};
+
+type OriginalFn = unsafe extern "thiscall" fn(*mut c_void, *mut Matrix4x3, i32, i32, f32) -> bool;
 
 #[has_vtable]
 #[derive(VTable, Debug)]
@@ -80,4 +88,43 @@ impl CEntity {
             .entity_list
             .get_entity_from_handle::<Weapon>(self.get_active_weapon())
     }
+
+    /// # Safety
+    /// this crashes :shrug:
+    pub unsafe fn setup(
+        &self,
+        out: &mut [Matrix4x3; 256],
+        max_bones: c_int,
+        mask: c_int,
+        time: f32,
+    ) -> bool {
+        let this = self.as_ptr() as *mut c_void;
+        if this.is_null() {
+            return false;
+        }
+        let vtable = this.cast::<*const *const ()>().add(1);
+        if vtable.is_null() {
+            return false;
+        }
+        let offset = (*vtable).add(13);
+        if offset.is_null() {
+            return false;
+        }
+        let f = *(offset).cast::<OriginalFn>();
+
+        let arg = vtable.cast::<c_void>();
+
+        f(arg, out.as_mut_ptr(), max_bones, mask, time)
+    }
 }
+
+// #[has_vtable]
+// #[derive(VTable, Debug)]
+// pub struct ClientRenderable{
+//
+// }
+//
+// impl ClientRenderable{
+//     #[virtual_index(13)]
+//     pub fn setup_bones(&self, mat: *const Matrix4x3, ) -> bool {}
+// }

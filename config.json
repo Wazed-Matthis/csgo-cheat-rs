@@ -8,6 +8,9 @@
       "min_damage": 10
     },
     "ESP": {},
-    "Watermark": {}
+    "Watermark": {},
+    "AntiAim": {
+      "pitch": 89.0
+    }
   }
 }

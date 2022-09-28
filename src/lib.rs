@@ -24,6 +24,7 @@ use winapi::um::winuser::{GetAsyncKeyState, VK_END};
 use crate::config::Configuration;
 use crate::events::{EventCreateMove, EventPaintTraverse};
 use crate::features::aimbot::Aimbot;
+use crate::features::anti_aim::AntiAim;
 use crate::features::esp::ESP;
 use crate::features::watermark::Watermark;
 use crate::features::Feature;
@@ -55,12 +56,17 @@ static CONFIG: OnceCell<Configuration> = OnceCell::new();
 /// This is not safe at all, we just need this to not get clippy warnings
 pub unsafe fn entry(module: HINSTANCE) {
     AllocConsole();
+
     std::env::set_var("RUST_LOG", "debug");
     pretty_env_logger::init();
+
     initialize();
-    init_hooks();
-    font::setup_fonts();
+
     netvar::scan_netvars();
+    font::setup_fonts();
+
+    init_hooks();
+
     loop {
         std::thread::sleep(Duration::from_millis(5));
         if GetAsyncKeyState(VK_END) != 0 {
@@ -72,6 +78,9 @@ pub unsafe fn entry(module: HINSTANCE) {
     }
 }
 register_features!(
+    AntiAimSettings => AntiAim {
+        pitch: f32
+    },
     AimbotSettings => Aimbot {
         min_damage: f32,
         fov: f32

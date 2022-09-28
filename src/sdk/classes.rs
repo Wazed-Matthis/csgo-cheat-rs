@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Index, Mul, Sub};
 
 use bitflags::bitflags;
 
@@ -15,6 +15,7 @@ bitflags! {
         const MOVE_RIGHT = 1 << 10;
         const ATTACK2= 1 << 11;
         const SCORE = 1 << 16;
+        const IN_WALK = 1 << 18;
         const BULL_RUSH = 1 << 22;
     }
 }
@@ -46,6 +47,40 @@ pub struct Vec3 {
     pub x: f32,
     pub y: f32,
     pub z: f32,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct Matrix4x3 {
+    pub body: [[f32; 4]; 3],
+    // float[3][4]
+}
+
+impl Matrix4x3 {
+    pub fn origin(&self) -> Vec3 {
+        Vec3 {
+            x: self.body[0][3],
+            y: self.body[1][3],
+            z: self.body[2][3],
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct Matrix3x4 {
+    pub body: [[f32; 3]; 4],
+    // float[4][3]
+}
+
+impl Matrix3x4 {
+    pub fn origin(&self) -> Vec3 {
+        Vec3 {
+            x: self.body[0][3],
+            y: self.body[1][3],
+            z: self.body[2][3],
+        }
+    }
 }
 
 impl Vec3 {
