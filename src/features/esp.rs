@@ -1,5 +1,6 @@
-use crate::font::FontType::Outline;
+use crate::font::FontType::{Outline, Shadow};
 use crate::{feature, font, Color, EventPaintTraverse, Vec3, INTERFACES};
+use color_space::{Hsv, Rgb};
 use std::ffi::CStr;
 
 feature!(ESP => ESP::paint_traverse);
@@ -92,16 +93,54 @@ impl ESP {
                             interfaces.engine.player_info(i, &mut player_info);
 
                             let name = CStr::from_ptr(player_info.name.as_ptr()).to_str().unwrap();
-                            let bounds = font::text_bounds(name, Outline);
+                            let bounds = font::text_bounds(name, Shadow);
 
                             font::text_center(
                                 name,
                                 x + ((x1 - x) / 2.0),
                                 y - bounds.1 as f32,
-                                Outline,
+                                Shadow,
                                 Color::new_rgba(255, 255, 255, 255),
                             );
                         }
+
+                        // Health bar
+                        interfaces
+                            .vgui_surface
+                            .set_draw_color(Color::new_hex(0xff000000));
+                        interfaces.vgui_surface.draw_outlined_rect(
+                            (x - 6f32) as i32,
+                            (y - 1f32) as i32,
+                            (x - 2f32) as i32,
+                            (y1 + 1f32) as i32,
+                        );
+                        interfaces
+                            .vgui_surface
+                            .set_draw_color(Color::new_hex(0x90000000));
+                        interfaces.vgui_surface.draw_filled_rect(
+                            (x - 5f32) as i32,
+                            (y) as i32,
+                            (x - 2f32) as i32,
+                            (y1) as i32,
+                        );
+                        let health = ent.health();
+                        let modifier = health as f32 / 100f32;
+                        let bar_height = (y1 - y) * modifier;
+                        let hsv = Hsv::new((modifier as f64) / 3f64 * 360f64, 1f64, 1f64);
+                        let rgb = Rgb::from(hsv);
+                        let bar_y = y + ((y1 - y) - bar_height);
+                        interfaces.vgui_surface.set_draw_color(Color::new_rgba(
+                            rgb.r as i32,
+                            rgb.g as i32,
+                            rgb.b as i32,
+                            255,
+                        ));
+                        interfaces.vgui_surface.draw_filled_rect(
+                            (x - 5f32) as i32,
+                            bar_y as i32,
+                            (x - 3f32) as i32,
+                            (bar_y + bar_height) as i32,
+                        );
                     }
                 }
             }
