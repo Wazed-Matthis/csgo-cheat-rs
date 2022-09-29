@@ -9,5 +9,6 @@ pub mod global_vars;
 pub mod panel;
 pub mod structs;
 pub mod surface;
+pub mod surface_props;
 pub mod trace;
 pub mod weapon_system;

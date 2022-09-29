@@ -5,8 +5,9 @@ extern crate core;
 use std::ffi::{c_char, c_float, c_void, CStr};
 use std::fs::File;
 use std::io::Read;
+use std::path::PathBuf;
 use std::time::Duration;
-use std::{mem, ptr};
+use std::{fs, mem, ptr};
 
 use event_bus::{dispatch_event, EventBus};
 use hook_rs_lib::{function_hook, register_hooks};
@@ -92,7 +93,7 @@ register_features!(
 pub fn initialize() {
     INTERFACES.set(Interfaces::init()).unwrap();
     let mut config_string = String::new();
-    File::open("C:/Users/matth/CLionProjects/csgo-cheat-rs/config.json")
+    File::open("config.json")
         .unwrap()
         .read_to_string(&mut config_string)
         .unwrap();

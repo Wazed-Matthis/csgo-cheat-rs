@@ -2,17 +2,24 @@ use std::cmp::Ordering;
 use std::ffi::CStr;
 use std::mem;
 use std::mem::zeroed;
+use std::ptr::null_mut;
 
 use log::debug;
 use vtables::VTable;
 use winapi::um::winbase::BuildCommDCBAndTimeoutsA;
+use winapi::um::winnt::INT;
 
 use crate::sdk::classes::{EButtons, Matrix3x4, Matrix4x3};
 use crate::sdk::structs::entities::CEntity;
 use crate::sdk::structs::weapon::{Weapon, WeaponInfo};
+use crate::sdk::surface::Surface;
+use crate::sdk::surface_props::SurfaceData;
 use crate::sdk::trace::hit_group::HitGroup::Invalid;
 use crate::sdk::trace::hit_group::{get_damage_multiplier, HitGroup};
-use crate::sdk::trace::{Ray, Trace, TraceFilterGeneric, TraceFilterTrait};
+use crate::sdk::trace::{
+    CSurface, Ray, Trace, TraceFilterGeneric, TraceFilterTrait, CONTENTS_HITBOX, MASK_SHOT_HULL,
+    SURF_HITBOX,
+};
 use crate::{feature, EventCreateMove, FeatureSettings, Vec3, CONFIG, INTERFACES};
 
 feature!(Aimbot => Aimbot::create_move);
@@ -37,9 +44,9 @@ impl Aimbot {
         let mut possible_targets = (0..interfaces.global_vars.max_clients)
             .flat_map(|i| {
                 let entity = interfaces.entity_list.entity(i);
-                entity.get()
+                (entity.get())
             })
-            .filter(|entity| {
+            .filter(|(entity)| {
                 entity.is_player() && entity.is_alive() && entity.as_ptr() != local_player.as_ptr()
             })
             .collect::<Vec<CEntity>>();
@@ -114,26 +121,27 @@ impl Aimbot {
             let aimbot_settings = guard.features.Aimbot.clone();
 
             if damage > aimbot_settings.min_damage
-                && dbg!(local_player.get_weapon().unwrap().next_attack()) + 0.2
-                    < dbg!(interfaces.global_vars.cur_time)
+                && local_player.get_weapon().unwrap().next_attack() + 0.2
+                    < interfaces.global_vars.cur_time
             {
                 let (yaw, pitch) =
                     Aimbot::calculate_angle_to_entity(closest_eye_pos, local_eye_pos);
                 cmd.view_angles.x = pitch;
                 cmd.view_angles.y = yaw;
 
-                let mut velocity = local_player.get_velocity() * -1.0;
+                let mut velocity = dbg!(local_player.get_velocity()) * -1.0;
 
                 velocity.z = 0.0;
 
                 let speed = velocity.len();
-                let yaw = velocity.y.atan2(velocity.x).to_degrees();
+                let yaw =
+                    (cmd.view_angles.y - velocity.y.atan2(velocity.x).to_degrees()).to_radians();
 
                 cmd.forward_move = yaw.cos() * speed - yaw.sin() * speed;
                 cmd.side_move = yaw.sin() * speed + yaw.cos() * speed;
 
-                if speed < 1.0 {
-                    cmd.buttons ^= EButtons::ATTACK;
+                if speed < weapon_data.max_speed / 5.0 {
+                    cmd.buttons |= EButtons::ATTACK;
                 }
             }
         }
@@ -165,7 +173,7 @@ impl Aimbot {
         let interfaces = INTERFACES.get().unwrap();
         let mut start = unsafe { zeroed::<Vec3>() };
         local_player.eye_pos(&mut start);
-        let direction = target_eye_pos - start;
+        let mut direction = target_eye_pos - start;
         let mut damage = weapon_data.damage as f32;
         let mut distance = 0.0;
         for i in (0..4).rev() {
@@ -196,8 +204,159 @@ impl Aimbot {
                     target.health() < damage as i32,
                 );
             }
+
+            let surface_data = interfaces
+                .surface_props
+                .surface_data(trace.surface.surface_props as i32);
+
+            let surface_data = unsafe { *surface_data };
+
+            if surface_data.penetration_modifier < 0.1 {
+                break;
+            }
+
+            // Start and damage are changed from handle_bullet_penetration()
+
+            dbg!(weapon_data.penetration);
+
+            if !Self::handle_bullet_penetration(
+                surface_data,
+                &mut trace,
+                &mut direction,
+                &mut start,
+                weapon_data.penetration,
+                &mut damage,
+            ) {
+                break;
+            }
         }
 
         (0f32, HitGroup::Invalid, false)
+    }
+
+    fn trace_to_exit(
+        end: &mut Vec3,
+        enter_trace: &mut Trace,
+        start: &mut Vec3,
+        dir: &mut Vec3,
+        exit_trace: &mut Trace,
+    ) -> bool {
+        let interfaces = INTERFACES.get().unwrap();
+        for distance in (0..90).step_by(4) {
+            *end = *start + *dir * distance as f32;
+            let point_contents = interfaces.trace.get_point_contents(
+                end,
+                MASK_SHOT_HULL | CONTENTS_HITBOX,
+                null_mut(),
+            );
+
+            if point_contents & MASK_SHOT_HULL == 0 && point_contents & CONTENTS_HITBOX != 0 {
+                continue;
+            }
+
+            let new_end = *end - (*dir * 4.0);
+            let ray = Ray::new(*end, new_end);
+            interfaces
+                .trace
+                .trace_ray_virtual(&ray, 0x600400B, 0 as _, exit_trace);
+
+            if exit_trace.start_solid && exit_trace.surface.flags & SURF_HITBOX == 0 {
+                let ray = Ray::new(*end, *start);
+                let mut filter = TraceFilterGeneric::new(exit_trace.ptr_entity as _);
+                interfaces.trace.trace_ray_virtual(
+                    &ray,
+                    0x600400B,
+                    &mut filter as *const TraceFilterGeneric as _,
+                    exit_trace,
+                );
+                if (exit_trace.fraction < 1.0 || exit_trace.all_solid) && !exit_trace.start_solid {
+                    *end = exit_trace.end;
+                    return true;
+                }
+                continue;
+            }
+
+            if exit_trace.start_solid || exit_trace.fraction > 1.0 && !exit_trace.all_solid {
+                if !exit_trace.ptr_entity.is_null()
+                    && !enter_trace.ptr_entity.is_null()
+                    && enter_trace.ptr_entity
+                        == interfaces.entity_list.entity(0).get().unwrap().as_ptr() as _
+                {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if exit_trace.surface.flags >> 7 & 1 == 0 && enter_trace.surface.flags >> 7 & 1 != 0 {
+                continue;
+            }
+
+            if exit_trace.plane.normal.dot(*dir) <= 1.0 {
+                let fraction = exit_trace.fraction * 4.0;
+                *end = *end - (*dir * fraction);
+
+                return true;
+            }
+        }
+
+        true
+    }
+
+    pub fn handle_bullet_penetration(
+        enter_surface_data: SurfaceData,
+        enter_trace: &mut Trace,
+        direction: &mut Vec3,
+        start: &mut Vec3,
+        penetration: f32,
+        damage: &mut f32,
+    ) -> bool {
+        let interfaces = INTERFACES.get().unwrap();
+        let mut exit_trace = unsafe { zeroed() };
+        let mut dummy = unsafe { zeroed() };
+
+        if !Self::trace_to_exit(
+            &mut dummy,
+            enter_trace,
+            &mut enter_trace.end.clone(),
+            direction,
+            &mut exit_trace,
+        ) {
+            return false;
+        }
+        let exit_surface_data = interfaces
+            .surface_props
+            .surface_data(exit_trace.surface.surface_props as i32);
+
+        let exit_surface_data = unsafe { *exit_surface_data };
+        let mut damage_modifier = 0.16f32;
+        let mut penetration_modifier = (enter_surface_data.penetration_modifier
+            + exit_surface_data.penetration_modifier)
+            / 2.0;
+        if enter_surface_data.material == 71 || enter_surface_data.material == 89 {
+            damage_modifier = 0.05;
+            penetration_modifier = 3.0;
+        } else if enter_trace.contents >> 3 & 1 == 0 || enter_trace.surface.flags >> 7 & 1 == 0 {
+            penetration_modifier = 1.0;
+        }
+        if enter_surface_data.material == exit_surface_data.material {
+            if exit_surface_data.material == 85 || exit_surface_data.material == 87 {
+                penetration_modifier = 3.0;
+            } else if exit_surface_data.material == 76 {
+                penetration_modifier = 2.0;
+            }
+        }
+
+        *damage -= (11.25 / penetration / penetration_modifier
+            + *damage * damage_modifier
+            + (exit_trace.end - enter_trace.end).len() / 24.0 / penetration_modifier)
+            - 50.0;
+        *start = exit_trace.end;
+
+        if *damage < 1.0 {
+            return false;
+        }
+
+        true
     }
 }

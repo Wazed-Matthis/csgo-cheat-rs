@@ -55,7 +55,7 @@ impl CEntity {
     netvar!("DT_BaseEntity", "m_bSpotted", is_spotted, bool);
     netvar!("DT_BaseEntity", "m_vecOrigin", get_origin, Vec3);
     netvar!("DT_BasePlayer", "m_vecViewOffset", get_view_offset, Vec3);
-    netvar!("DT_BasePlayer", "m_vecVelocity", get_velocity, Vec3);
+    netvar!("DT_BasePlayer", "m_vecVelocity[0]", get_velocity, Vec3);
     netvar!("DT_BasePlayer", "m_hViewModel[0]", get_view_model, i32);
     netvar!("DT_BasePlayer", "m_iObserverMode", get_observer_mode, i32);
     netvar!(

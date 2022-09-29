@@ -110,7 +110,7 @@ pub struct WeaponInfo {
     _pad8: [c_char; 0x10],
     silencer: bool,
     _pad9: [c_char; 0xF],
-    max_speed: f32,
+    pub max_speed: f32,
     max_speed_alt: f32,
     _pad10: [c_char; 0x64],
     recoil_magnitude: f32,

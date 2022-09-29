@@ -12,6 +12,7 @@ use crate::sdk::panel::Panel;
 use crate::sdk::surface::Surface;
 use crate::sdk::trace::EngineTrace;
 use crate::{lpcstr, Client, EngineClient, EntityList, GlobalVars};
+use crate::sdk::surface_props::SurfaceProps;
 
 const CLIENT: &str = "VClient018";
 const ENTITY_LIST: &str = "VClientEntityList003";
@@ -27,7 +28,7 @@ const _MAT_SYSTEM: &str = "VMaterialSystem080";
 const _MODEL_RENDER: &str = "VEngineModel016";
 const _MODEL_INFO: &str = "VModelInfoClient004";
 const _LOCALIZE: &str = "Localize_001";
-const _PHYS_SURFACE_PROPS: &str = "VPhysicsSurfaceProps001";
+const PHYS_SURFACE_PROPS: &str = "VPhysicsSurfaceProps001";
 const PREDICTION: &str = "VClientPrediction001";
 const _GAME_EVENT_MGR: &str = "GAMEEVENTSMANAGER002";
 const DEBUG_OVERLAY: &str = "VDebugOverlay004";
@@ -44,6 +45,7 @@ pub struct Interfaces {
     pub debug_overlay: DebugOverlay,
     pub prediction: Prediction,
     pub trace: EngineTrace,
+    pub surface_props: SurfaceProps,
 }
 
 unsafe impl Send for Interfaces {}
@@ -68,6 +70,7 @@ impl Interfaces {
                 debug_overlay: get_interface("engine.dll", DEBUG_OVERLAY),
                 prediction: get_interface("client.dll", PREDICTION),
                 trace: get_interface("engine.dll", ENGINE_TRACE),
+                surface_props: get_interface("vphysics.dll", PHYS_SURFACE_PROPS)
             }
         }
     }

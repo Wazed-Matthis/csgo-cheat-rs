@@ -91,6 +91,10 @@ impl Vec3 {
     pub fn len_sqr(&self) -> f32 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
+
+    pub fn dot(&self, b: Vec3) -> f32 {
+        self.x * b.x + self.y * b.y + self.z * b.z
+    }
 }
 
 impl Add for Vec3 {
