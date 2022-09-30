@@ -27,7 +27,11 @@ bitflags! {
 /// # Safety
 /// This is safe because setup fonts will always be called before using fonts
 static OUTLINE: OnceCell<u64> = OnceCell::new();
+static OUTLINE_BOLD: OnceCell<u64> = OnceCell::new();
 static SHADOW: OnceCell<u64> = OnceCell::new();
+static SHADOW_BOLD: OnceCell<u64> = OnceCell::new();
+static ITEMS: OnceCell<u64> = OnceCell::new();
+static SMALL: OnceCell<u64> = OnceCell::new();
 
 pub fn setup_fonts() {
     let interfaces = INTERFACES.get().unwrap();
@@ -37,7 +41,7 @@ pub fn setup_fonts() {
     OUTLINE.set(outline).expect("Outline font already set.");
     interfaces.vgui_surface.font_glyph(
         outline as HFONT,
-        lpcstr!("Tahoma"),
+        lpcstr!("Verdana"),
         12,
         500,
         0,
@@ -52,7 +56,7 @@ pub fn setup_fonts() {
     SHADOW.set(shadow).expect("Shadow font already set.");
     interfaces.vgui_surface.font_glyph(
         shadow as HFONT,
-        lpcstr!("Tahoma"),
+        lpcstr!("Verdana"),
         12,
         500,
         0,
@@ -61,12 +65,80 @@ pub fn setup_fonts() {
         0,
         0,
     );
+
+    // Set the default shadowed font
+    let shadow_bold = interfaces.vgui_surface.create_font();
+    SHADOW_BOLD
+        .set(shadow_bold)
+        .expect("Shadow font already set.");
+    interfaces.vgui_surface.font_glyph(
+        shadow_bold as HFONT,
+        lpcstr!("Tahoma"),
+        12,
+        700,
+        0,
+        0,
+        (FontFlags::ANTI_ALIAS | FontFlags::DROP_SHADOW).bits(),
+        0,
+        0,
+    );
+
+    // Set the default outline bold font
+    let outline_bold = interfaces.vgui_surface.create_font();
+    OUTLINE_BOLD
+        .set(outline_bold)
+        .expect("Outline-bold font already set.");
+    interfaces.vgui_surface.font_glyph(
+        outline_bold as HFONT,
+        lpcstr!("Verdana"),
+        12,
+        700,
+        0,
+        0,
+        FontFlags::OUTLINE.bits(),
+        0,
+        0,
+    );
+
+    // Set the default icon font
+    let items = interfaces.vgui_surface.create_font();
+    ITEMS.set(items).expect("Items font already set.");
+    interfaces.vgui_surface.font_glyph(
+        items as HFONT,
+        lpcstr!("Counter-Strike"),
+        28,
+        1000,
+        0,
+        0,
+        (FontFlags::ANTI_ALIAS | FontFlags::DROP_SHADOW).bits(),
+        0,
+        0,
+    );
+
+    // Set the default icon font
+    let small = interfaces.vgui_surface.create_font();
+    SMALL.set(small).expect("Small font already set.");
+    interfaces.vgui_surface.font_glyph(
+        small as HFONT,
+        lpcstr!("Small Fonts"),
+        8,
+        500,
+        0,
+        0,
+        FontFlags::OUTLINE.bits(),
+        0,
+        0,
+    );
 }
 
 /// The different available font types
 pub enum FontType {
     Outline,
+    OutlineBold,
     Shadow,
+    ShadowBold,
+    Items,
+    Small,
 }
 
 /// Converts a str to a Utf16 equivilant as bytes
@@ -91,7 +163,7 @@ pub fn text(text: &str, x: f32, y: f32, font_type: FontType, color: Color) {
     // Draw text
     interfaces
         .vgui_surface
-        .render_text(i.as_ptr(), i.len() as i32, 0)
+        .render_text(i.as_ptr(), text.len() as i32, 0)
 }
 
 /// Renders centered text at a given position
@@ -114,7 +186,9 @@ pub fn text_center(text: &str, x: f32, y: f32, font_type: FontType, color: Color
         .text_pos((x - (width as f32) / 2.0) as i32, y as i32);
 
     // Draw text
-    interfaces.vgui_surface.render_text(ptr, i.len() as i32, 0)
+    interfaces
+        .vgui_surface
+        .render_text(ptr, text.len() as i32, 0)
 }
 
 pub fn text_bounds(text: &str, font_type: FontType) -> (i32, i32) {
@@ -135,6 +209,10 @@ pub fn text_bounds(text: &str, font_type: FontType) -> (i32, i32) {
 fn font_by_type(font_type: FontType) -> u64 {
     *match font_type {
         FontType::Outline => OUTLINE.get().unwrap(),
+        FontType::OutlineBold => OUTLINE_BOLD.get().unwrap(),
         FontType::Shadow => SHADOW.get().unwrap(),
+        FontType::ShadowBold => SHADOW_BOLD.get().unwrap(),
+        FontType::Items => ITEMS.get().unwrap(),
+        FontType::Small => SMALL.get().unwrap(),
     }
 }

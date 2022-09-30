@@ -1,12 +1,18 @@
 use crate::font::FontType::Shadow;
-use crate::{feature, font, Color, EventPaintTraverse};
+use crate::{feature, font, Color, EventPaintTraverse, INTERFACES};
+use std::fmt::format;
 
 feature!(Watermark => Watermark::paint_traverse);
 
 impl Watermark {
     pub fn paint_traverse(_: &mut EventPaintTraverse) {
+        let interfaces = INTERFACES.get().unwrap();
+
         font::text(
-            "schiller-hook-rs (tasty)",
+            &format!(
+                "powered by rust @ {}fps",
+                (1f32 / interfaces.global_vars.absolute_frame_time) as i32
+            ),
             2.0,
             2.0,
             Shadow,

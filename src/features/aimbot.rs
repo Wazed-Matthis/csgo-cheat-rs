@@ -176,7 +176,6 @@ impl Aimbot {
         local_player.eye_pos(&mut start);
 
         let mut direction = (target_eye_pos - start).normalized();
-        dbg!(direction);
         // Get weapon data
         let mut damage = weapon_data.damage as f32;
         let mut penetration = weapon_data.penetration;
@@ -212,8 +211,6 @@ impl Aimbot {
             damage *= weapon_data.range_modifier.powf(distance / 500f32)
                 * Self::scale_damage(trace.hit_group, weapon_data.headshot_mult);
 
-            dbg!(damage);
-
             let group = HitGroup::try_from(trace.hit_group).unwrap_or(HitGroup::Invalid);
 
             if trace.ptr_entity == target.as_ptr() as _
@@ -231,7 +228,9 @@ impl Aimbot {
                 }
             }
 
-            dbg!(weapon_data.penetration);
+            if damage > target.health() as f32 {
+                return (damage, group, true);
+            }
 
             let surface_data = interfaces
                 .surface_props
@@ -373,8 +372,6 @@ impl Aimbot {
             + *damage * damage_modifier
             + (exit_trace.end - enter_trace.end).mag() / 24.0 / penetration_modifier);
         *start = exit_trace.end;
-
-        dbg!(*damage);
 
         if *damage < 1.0 {
             return false;

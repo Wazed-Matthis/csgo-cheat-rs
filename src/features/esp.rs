@@ -1,7 +1,8 @@
-use crate::font::FontType::{Outline, Shadow};
-use crate::{feature, font, Color, EventPaintTraverse, Vec3, INTERFACES};
+use crate::font::FontType::{Items, Outline, OutlineBold, Shadow, ShadowBold, Small};
+use crate::{feature, font, sdk, Color, EventPaintTraverse, Vec3, INTERFACES, WEAPON_MAP};
 use color_space::{Hsv, Rgb};
-use std::ffi::CStr;
+use std::ffi::{CStr, OsStr};
+use widestring::WideCString;
 
 feature!(ESP => ESP::paint_traverse);
 
@@ -141,6 +142,45 @@ impl ESP {
                             (x - 3f32) as i32,
                             (bar_y + bar_height) as i32,
                         );
+                        // Draw health text
+                        if health < 100 {
+                            let bounds = font::text_bounds(health.to_string().as_str(), ShadowBold);
+                            font::text_center(
+                                health.to_string().as_str(),
+                                x - 4f32,
+                                bar_y - bounds.1 as f32 / 2f32,
+                                OutlineBold,
+                                Color::new_rgba(255, 255, 255, 255),
+                            );
+                        }
+                        if let Some(weapon) = ent.get_weapon() {
+                            // Weapon text
+                            let display_name_find =
+                                interfaces.localize.find(weapon.get_weapon_data().name);
+                            let c_str = unsafe { WideCString::from_ptr_str(display_name_find) };
+                            let weapon_name = c_str.to_string_lossy();
+                            let text_bounds = font::text_bounds(&weapon_name.to_uppercase(), Small);
+                            font::text_center(
+                                &weapon_name.to_uppercase(),
+                                x + ((x1 - x) / 2.0),
+                                y1 + 1f32,
+                                Small,
+                                Color::new_hex(0xffffffff),
+                            );
+                            // Weapon icon
+                            let weapon_map = WEAPON_MAP
+                                .get()
+                                .expect("Could not get weapon map for Item Rendering");
+                            if let Some(weapon_id) = weapon_map.get(&(weapon.get_id() as i32)) {
+                                font::text_center(
+                                    weapon_id,
+                                    x + ((x1 - x) / 2.0),
+                                    y1 + text_bounds.1 as f32 - 4f32,
+                                    Items,
+                                    Color::new_hex(0xffffffff),
+                                )
+                            }
+                        }
                     }
                 }
             }
