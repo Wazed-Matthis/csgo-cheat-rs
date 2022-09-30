@@ -21,6 +21,15 @@ pub struct Color {
 }
 
 impl Color {
+    pub fn new_hex(hex: u32) -> Self {
+        Self::new_rgba(
+            ((hex >> 16) & 0xff) as i32,
+            ((hex >> 8) & 0xff) as i32,
+            (hex & 0xff) as i32,
+            ((hex >> 24) & 0xff) as i32,
+        )
+    }
+
     pub fn new_rgb(r: i32, g: i32, b: i32) -> Self {
         Self::new_rgba(r, g, b, 255)
     }
