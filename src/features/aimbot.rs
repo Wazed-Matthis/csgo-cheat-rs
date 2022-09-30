@@ -176,6 +176,7 @@ impl Aimbot {
         local_player.eye_pos(&mut start);
 
         let mut direction = (target_eye_pos - start).normalized();
+        dbg!(direction);
         // Get weapon data
         let mut damage = weapon_data.damage as f32;
         let mut penetration = weapon_data.penetration;
@@ -208,7 +209,10 @@ impl Aimbot {
 
             // Update damage based on the distance traveled
             distance += trace.fraction * remaining;
-            damage *= weapon_data.range_modifier.powf(distance / 500f32);
+            damage *= weapon_data.range_modifier.powf(distance / 500f32)
+                * Self::scale_damage(trace.hit_group, weapon_data.headshot_mult);
+
+            dbg!(damage);
 
             let group = HitGroup::try_from(trace.hit_group).unwrap_or(HitGroup::Invalid);
 

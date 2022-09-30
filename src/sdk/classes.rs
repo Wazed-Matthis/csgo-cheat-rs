@@ -98,7 +98,7 @@ impl Vec3 {
     }
 
     pub fn normalized(&self) -> Vec3 {
-        let mag = self.mag();
+        let mag = self.mag_sqrt();
         Vec3 {
             x: self.x / mag,
             y: self.y / mag,
@@ -175,16 +175,6 @@ impl Div<f32> for Vec3 {
             x: self.x / rhs,
             y: self.y / rhs,
             z: self.z / rhs,
-        }
-    }
-}
-
-impl DivAssign for Vec3 {
-    fn div_assign(&mut self, rhs: Self) {
-        self = &mut Vec3 {
-            x: self.x / rhs.x,
-            y: self.y / rhs.y,
-            z: self.z / rhs.z,
         }
     }
 }
