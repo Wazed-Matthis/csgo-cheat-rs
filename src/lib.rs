@@ -93,7 +93,7 @@ register_features!(
 pub fn initialize() {
     INTERFACES.set(Interfaces::init()).unwrap();
     let mut config_string = String::new();
-    File::open("config.json")
+    File::open("C:/Users/matth/CLionProjects/csgo-cheat-rs/config.json")
         .unwrap()
         .read_to_string(&mut config_string)
         .unwrap();

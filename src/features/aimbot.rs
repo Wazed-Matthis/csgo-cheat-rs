@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::ffi::CStr;
 use std::mem;
 use std::mem::zeroed;
+use std::process::exit;
 use std::ptr::null_mut;
 
 use log::debug;
@@ -17,8 +18,8 @@ use crate::sdk::surface_props::SurfaceData;
 use crate::sdk::trace::hit_group::HitGroup::Invalid;
 use crate::sdk::trace::hit_group::{get_damage_multiplier, HitGroup};
 use crate::sdk::trace::{
-    CSurface, Ray, Trace, TraceFilterGeneric, TraceFilterTrait, CONTENTS_HITBOX, MASK_SHOT_HULL,
-    SURF_HITBOX,
+    CSurface, Ray, Trace, TraceFilterGeneric, TraceFilterTrait, CONTENTS_GRATE, CONTENTS_HITBOX,
+    MASK_SHOT, MASK_SHOT_HULL, SURF_HITBOX, SURF_NODRAW,
 };
 use crate::{feature, EventCreateMove, FeatureSettings, Vec3, CONFIG, INTERFACES};
 
@@ -133,7 +134,7 @@ impl Aimbot {
 
                 velocity.z = 0.0;
 
-                let speed = velocity.len();
+                let speed = velocity.mag_sqrt();
                 let yaw =
                     (cmd.view_angles.y - velocity.y.atan2(velocity.x).to_degrees()).to_radians();
 
@@ -154,7 +155,7 @@ impl Aimbot {
             (-delta.z).atan2(delta.x.hypot(delta.y)).to_degrees(),
         )
     }
-    fn damage_multiplier(hit_group: i32, hs_multiplier: f32) -> f32 {
+    fn scale_damage(hit_group: i32, hs_multiplier: f32) -> f32 {
         match HitGroup::try_from(hit_group).unwrap_or(Invalid) {
             HitGroup::Head => hs_multiplier,
             HitGroup::Stomach => 1.25,
@@ -173,54 +174,71 @@ impl Aimbot {
         let interfaces = INTERFACES.get().unwrap();
         let mut start = unsafe { zeroed::<Vec3>() };
         local_player.eye_pos(&mut start);
-        let mut direction = target_eye_pos - start;
+
+        let mut direction = (target_eye_pos - start).normalized();
+        // Get weapon data
         let mut damage = weapon_data.damage as f32;
+        let mut penetration = weapon_data.penetration;
+
         let mut distance = 0.0;
-        for i in (0..4).rev() {
-            let current_dist = weapon_data.range - distance;
-            let end = start + (direction * current_dist);
+        let mut pen = 4;
+
+        while damage >= 0.0 {
+            // Calculate remaining length
+            let remaining = weapon_data.range - distance;
+
+            // Set trace end
+            let end = start + (direction * remaining);
+
+            // Setup the ray and trace
             let ray = Ray::new(start, end);
             let mut trace = unsafe { zeroed::<Trace>() };
             let mut filter = TraceFilterGeneric::new(local_player.as_ptr());
             interfaces.trace.trace_ray_virtual(
                 &ray,
-                0x4600400B,
+                MASK_SHOT as u32,
                 &mut filter as *mut TraceFilterGeneric as *mut usize,
                 &mut trace,
             );
 
+            // If not hit
             if trace.fraction == 1.0 {
                 break;
             }
-            distance += trace.fraction * current_dist;
-            damage = damage as f32
-                * get_damage_multiplier(trace.hit_group, weapon_data.headshot_mult)
-                * weapon_data.range_modifier.powf(distance / 500f32);
 
-            if trace.ptr_entity as *const usize == target.as_ptr() {
-                return (
-                    damage,
-                    HitGroup::try_from(trace.hit_group).unwrap_or(HitGroup::Invalid),
-                    target.health() < damage as i32,
-                );
+            // Update damage based on the distance traveled
+            distance += trace.fraction * remaining;
+            damage *= weapon_data.range_modifier.powf(distance / 500f32);
+
+            let group = HitGroup::try_from(trace.hit_group).unwrap_or(HitGroup::Invalid);
+
+            if trace.ptr_entity == target.as_ptr() as _
+                && group > HitGroup::Generic
+                && group < HitGroup::RightLeg
+            {
+                if target.health() < damage as i32 {
+                    return (damage, group, true);
+                }
+
+                let aimbot_settings = CONFIG.get().unwrap().features.Aimbot.clone();
+
+                if damage > aimbot_settings.min_damage {
+                    return (damage, group, false);
+                }
             }
+
+            dbg!(weapon_data.penetration);
 
             let surface_data = interfaces
                 .surface_props
                 .surface_data(trace.surface.surface_props as i32);
 
-            let surface_data = unsafe { *surface_data };
-
             if surface_data.penetration_modifier < 0.1 {
                 break;
             }
 
-            // Start and damage are changed from handle_bullet_penetration()
-
-            dbg!(weapon_data.penetration);
-
             if !Self::handle_bullet_penetration(
-                surface_data,
+                *surface_data,
                 &mut trace,
                 &mut direction,
                 &mut start,
@@ -229,6 +247,8 @@ impl Aimbot {
             ) {
                 break;
             }
+
+            pen -= 1;
         }
 
         (0f32, HitGroup::Invalid, false)
@@ -242,13 +262,11 @@ impl Aimbot {
         exit_trace: &mut Trace,
     ) -> bool {
         let interfaces = INTERFACES.get().unwrap();
-        for distance in (0..90).step_by(4) {
+        for distance in (4..90).step_by(4) {
             *end = *start + *dir * distance as f32;
-            let point_contents = interfaces.trace.get_point_contents(
-                end,
-                MASK_SHOT_HULL | CONTENTS_HITBOX,
-                null_mut(),
-            );
+            let point_contents = interfaces
+                .trace
+                .get_point_contents(end, MASK_SHOT, null_mut());
 
             if point_contents & MASK_SHOT_HULL == 0 && point_contents & CONTENTS_HITBOX != 0 {
                 continue;
@@ -258,14 +276,14 @@ impl Aimbot {
             let ray = Ray::new(*end, new_end);
             interfaces
                 .trace
-                .trace_ray_virtual(&ray, 0x600400B, 0 as _, exit_trace);
+                .trace_ray_virtual(&ray, MASK_SHOT as u32, 0 as _, exit_trace);
 
             if exit_trace.start_solid && exit_trace.surface.flags & SURF_HITBOX == 0 {
                 let ray = Ray::new(*end, *start);
                 let mut filter = TraceFilterGeneric::new(exit_trace.ptr_entity as _);
                 interfaces.trace.trace_ray_virtual(
                     &ray,
-                    0x600400B,
+                    MASK_SHOT_HULL as u32,
                     &mut filter as *const TraceFilterGeneric as _,
                     exit_trace,
                 );
@@ -282,25 +300,25 @@ impl Aimbot {
                     && enter_trace.ptr_entity
                         == interfaces.entity_list.entity(0).get().unwrap().as_ptr() as _
                 {
+                    *exit_trace = *enter_trace;
+                    exit_trace.end = *start + *dir;
                     return true;
                 }
 
                 continue;
             }
 
-            if exit_trace.surface.flags >> 7 & 1 == 0 && enter_trace.surface.flags >> 7 & 1 != 0 {
-                continue;
+            if exit_trace.surface.flags & SURF_NODRAW == 0 {
+                return true;
             }
-
             if exit_trace.plane.normal.dot(*dir) <= 1.0 {
                 let fraction = exit_trace.fraction * 4.0;
                 *end = *end - (*dir * fraction);
-
                 return true;
             }
         }
 
-        true
+        false
     }
 
     pub fn handle_bullet_penetration(
@@ -349,9 +367,10 @@ impl Aimbot {
 
         *damage -= (11.25 / penetration / penetration_modifier
             + *damage * damage_modifier
-            + (exit_trace.end - enter_trace.end).len() / 24.0 / penetration_modifier)
-            - 50.0;
+            + (exit_trace.end - enter_trace.end).mag() / 24.0 / penetration_modifier);
         *start = exit_trace.end;
+
+        dbg!(*damage);
 
         if *damage < 1.0 {
             return false;

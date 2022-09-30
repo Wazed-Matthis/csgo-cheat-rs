@@ -1,4 +1,5 @@
-use std::ops::{Add, Index, Mul, Sub};
+use std::f32::EPSILON;
+use std::ops::{Add, Div, DivAssign, Index, Mul, Sub};
 
 use bitflags::bitflags;
 
@@ -84,16 +85,25 @@ impl Matrix3x4 {
 }
 
 impl Vec3 {
-    pub fn len(&self) -> f32 {
+    pub fn mag_sqrt(&self) -> f32 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
 
-    pub fn len_sqr(&self) -> f32 {
+    pub fn mag(&self) -> f32 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
     pub fn dot(&self, b: Vec3) -> f32 {
         self.x * b.x + self.y * b.y + self.z * b.z
+    }
+
+    pub fn normalized(&self) -> Vec3 {
+        let mag = self.mag();
+        Vec3 {
+            x: self.x / mag,
+            y: self.y / mag,
+            z: self.z / mag,
+        }
     }
 }
 
@@ -105,6 +115,18 @@ impl Add for Vec3 {
             x: self.x + rhs.x,
             y: self.y + rhs.y,
             z: self.z + rhs.z,
+        }
+    }
+}
+
+impl Add<f32> for Vec3 {
+    type Output = Vec3;
+
+    fn add(self, rhs: f32) -> Self::Output {
+        Vec3 {
+            x: self.x + rhs,
+            y: self.y + rhs,
+            z: self.z + rhs,
         }
     }
 }
@@ -129,6 +151,40 @@ impl Sub for Vec3 {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
             z: self.z - rhs.z,
+        }
+    }
+}
+
+impl Div for Vec3 {
+    type Output = Vec3;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        Vec3 {
+            x: self.x / rhs.x,
+            y: self.y / rhs.y,
+            z: self.z / rhs.z,
+        }
+    }
+}
+
+impl Div<f32> for Vec3 {
+    type Output = Vec3;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        Vec3 {
+            x: self.x / rhs,
+            y: self.y / rhs,
+            z: self.z / rhs,
+        }
+    }
+}
+
+impl DivAssign for Vec3 {
+    fn div_assign(&mut self, rhs: Self) {
+        self = &mut Vec3 {
+            x: self.x / rhs.x,
+            y: self.y / rhs.y,
+            z: self.z / rhs.z,
         }
     }
 }

@@ -9,18 +9,18 @@ pub mod hit_group {
     use core::convert::TryFrom;
 
     #[repr(i32)]
-    #[derive(Debug)]
+    #[derive(Debug, Eq, PartialOrd, PartialEq)]
     pub enum HitGroup {
         Invalid = -1,
         Generic = 0,
-        Head,
-        Chest,
-        Stomach,
-        LeftArm,
-        RightArm,
-        LeftLeg,
-        RightLeg,
-        Gear,
+        Head = 1,
+        Chest = 2,
+        Stomach = 3,
+        LeftArm = 4,
+        RightArm = 5,
+        LeftLeg = 6,
+        RightLeg = 7,
+        Gear = 10,
     }
 
     impl TryFrom<i32> for HitGroup {
@@ -44,7 +44,7 @@ pub mod hit_group {
             return match hit_group {
                 HitGroup::Head => headshot_mul,
                 HitGroup::Stomach => 1.25,
-                HitGroup::RightLeg => 0.75,
+                HitGroup::LeftLeg | HitGroup::RightLeg => 0.75,
                 _ => 1.0,
             };
         }
@@ -120,7 +120,7 @@ impl Ray {
         let mut instance = unsafe { core::mem::zeroed::<Self>() };
         instance.delta = VectorAligned::from(end - start);
         instance.start = VectorAligned::from(start);
-        instance.is_swept = Vec3::from(instance.delta).len_sqr() != 0e0;
+        instance.is_swept = Vec3::from(instance.delta).mag() != 0e0;
         instance.is_ray = true;
         instance
     }
@@ -221,6 +221,7 @@ impl TraceFilterTrait for TraceFilterGeneric {
 
 pub const MASK_SHOT: i32 = 0x1 | 0x4000 | 0x2000000 | 0x2 | 0x4000000 | 0x40000000;
 pub const MASK_SHOT_HULL: i32 = 0x1 | 0x4000 | 0x2000000 | 0x2 | 0x4000000 | 0x8;
+pub const CONTENTS_GRATE: i32 = 0x8;
 pub const CONTENTS_HITBOX: i32 = 0x40000000;
 pub const SURF_HITBOX: u16 = 0x8000;
 pub const SURF_LIGHT: u16 = 0x0001;

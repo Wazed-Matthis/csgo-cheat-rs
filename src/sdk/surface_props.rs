@@ -1,4 +1,4 @@
-use std::ffi::c_char;
+use std::ffi::{c_char, c_short};
 use vtables::VTable;
 use vtables_derive::{has_vtable, virtual_index, VTable};
 
@@ -9,7 +9,7 @@ pub struct SurfaceData {
     jump_factor: f32,
     pub(crate) penetration_modifier: f32,
     damage_modifier: f32,
-    pub(crate) material: i16,
+    pub(crate) material: c_short,
     climbable: bool,
 }
 
@@ -19,5 +19,5 @@ pub struct SurfaceProps {}
 
 impl SurfaceProps {
     #[virtual_index(5)]
-    pub fn surface_data(&self, index: i32) -> *const SurfaceData {}
+    pub fn surface_data(&self, index: i32) -> &'static SurfaceData {}
 }
