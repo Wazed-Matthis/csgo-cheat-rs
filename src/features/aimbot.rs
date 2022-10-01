@@ -18,8 +18,9 @@ use crate::sdk::surface_props::SurfaceData;
 use crate::sdk::trace::hit_group::HitGroup::Invalid;
 use crate::sdk::trace::hit_group::{get_damage_multiplier, HitGroup};
 use crate::sdk::trace::{
-    CSurface, Ray, Trace, TraceFilterGeneric, TraceFilterTrait, CONTENTS_GRATE, CONTENTS_HITBOX,
-    MASK_SHOT, MASK_SHOT_HULL, SURF_HITBOX, SURF_NODRAW,
+    CSurface, Ray, Trace, TraceFilterGeneric, TraceFilterTrait, CHAR_TEX_CARDBOARD, CHAR_TEX_GLASS,
+    CHAR_TEX_GRATE, CHAR_TEX_PLASTIC, CHAR_TEX_WOOD, CONTENTS_GRATE, CONTENTS_HITBOX, MASK_SHOT,
+    MASK_SHOT_HULL, SURF_HITBOX, SURF_NODRAW,
 };
 use crate::{feature, EventCreateMove, FeatureSettings, Vec3, CONFIG, INTERFACES};
 
@@ -98,7 +99,7 @@ impl Aimbot {
 
         let closest_target = possible_targets.first();
 
-        let weapon_data = match local_player.get_weapon() {
+        let weapon_data = match local_player.weapon() {
             None => return,
             Some(weapon) => weapon.get_weapon_data(),
         };
@@ -122,7 +123,7 @@ impl Aimbot {
             let aimbot_settings = guard.features.Aimbot.clone();
 
             if damage > aimbot_settings.min_damage
-                && local_player.get_weapon().unwrap().next_attack() + 0.2
+                && local_player.weapon().unwrap().next_attack() + 0.2
                     < interfaces.global_vars.cur_time
             {
                 let (yaw, pitch) =
@@ -130,7 +131,7 @@ impl Aimbot {
                 cmd.view_angles.x = pitch;
                 cmd.view_angles.y = yaw;
 
-                let mut velocity = dbg!(local_player.get_velocity()) * -1.0;
+                let mut velocity = local_player.velocity() * -1.0;
 
                 velocity.z = 0.0;
 
@@ -155,13 +156,29 @@ impl Aimbot {
             (-delta.z).atan2(delta.x.hypot(delta.y)).to_degrees(),
         )
     }
-    fn scale_damage(hit_group: i32, hs_multiplier: f32) -> f32 {
-        match HitGroup::try_from(hit_group).unwrap_or(Invalid) {
+    fn scale_damage(target: &CEntity, hit_group: i32, hs_multiplier: f32, armor_ratio: f32) -> f32 {
+        let group = HitGroup::try_from(hit_group).unwrap_or(Invalid);
+        let mut damage = match group {
             HitGroup::Head => hs_multiplier,
             HitGroup::Stomach => 1.25,
             HitGroup::LeftLeg | HitGroup::RightLeg => 0.75,
             _ => 1.0,
+        };
+
+        let armor = target.armor();
+        if armor > 0 || (group == HitGroup::Head && target.has_helmet()) {
+            let heavy_ratio = 1f32;
+            let bonus_ratio = 0.5f32;
+            let ratio = armor_ratio * 0.05;
+
+            damage -= if (armor as f32) < damage * armor_ratio / 2.0 {
+                armor as f32 * 4.0
+            } else {
+                damage * (1.0 - armor_ratio)
+            };
         }
+
+        damage.floor()
     }
 
     fn handle_wall(
@@ -183,7 +200,7 @@ impl Aimbot {
         let mut distance = 0.0;
         let mut pen = 4;
 
-        while damage >= 0.0 {
+        while damage >= 0.0 && pen > 0 {
             // Calculate remaining length
             let remaining = weapon_data.range - distance;
 
@@ -208,8 +225,12 @@ impl Aimbot {
 
             // Update damage based on the distance traveled
             distance += trace.fraction * remaining;
-            damage *= weapon_data.range_modifier.powf(distance / 500f32)
-                * Self::scale_damage(trace.hit_group, weapon_data.headshot_mult);
+            damage *= Self::scale_damage(
+                target,
+                trace.hit_group,
+                weapon_data.headshot_mult,
+                weapon_data.armor_ratio / 2.0,
+            ) * weapon_data.range_modifier.powf(distance / 500f32);
 
             let group = HitGroup::try_from(trace.hit_group).unwrap_or(HitGroup::Invalid);
 
@@ -221,15 +242,21 @@ impl Aimbot {
                     return (damage, group, true);
                 }
 
+                debug!(
+                    "Penetrating {} with {} ",
+                    unsafe { CStr::from_ptr(trace.surface.name).to_str().unwrap() },
+                    pen
+                );
+
                 let aimbot_settings = CONFIG.get().unwrap().features.Aimbot.clone();
 
                 if damage > aimbot_settings.min_damage {
                     return (damage, group, false);
                 }
-            }
 
-            if damage > target.health() as f32 {
-                return (damage, group, true);
+                if damage >= target.health() as f32 {
+                    return (damage, group, true);
+                }
             }
 
             let surface_data = interfaces
@@ -271,7 +298,7 @@ impl Aimbot {
                 .trace
                 .get_point_contents(end, MASK_SHOT, null_mut());
 
-            if point_contents & MASK_SHOT_HULL == 0 && point_contents & CONTENTS_HITBOX != 0 {
+            if point_contents & MASK_SHOT_HULL != 0 && point_contents & CONTENTS_HITBOX == 0 {
                 continue;
             }
 
@@ -281,7 +308,7 @@ impl Aimbot {
                 .trace
                 .trace_ray_virtual(&ray, MASK_SHOT as u32, 0 as _, exit_trace);
 
-            if exit_trace.start_solid && exit_trace.surface.flags & SURF_HITBOX == 0 {
+            if exit_trace.start_solid && exit_trace.surface.flags & SURF_HITBOX != 0 {
                 let ray = Ray::new(*end, *start);
                 let mut filter = TraceFilterGeneric::new(exit_trace.ptr_entity as _);
                 interfaces.trace.trace_ray_virtual(
@@ -311,7 +338,7 @@ impl Aimbot {
                 continue;
             }
 
-            if exit_trace.surface.flags & SURF_NODRAW == 0 {
+            if exit_trace.surface.flags & SURF_NODRAW != 0 {
                 return true;
             }
             if exit_trace.plane.normal.dot(*dir) <= 1.0 {
@@ -351,27 +378,45 @@ impl Aimbot {
 
         let exit_surface_data = unsafe { *exit_surface_data };
         let mut damage_modifier = 0.16f32;
-        let mut penetration_modifier = (enter_surface_data.penetration_modifier
-            + exit_surface_data.penetration_modifier)
-            / 2.0;
-        if enter_surface_data.material == 71 || enter_surface_data.material == 89 {
-            damage_modifier = 0.05;
+        let mut penetration_modifier = 0.0;
+
+        // used later in calculations.
+        let penetration_mod = 0.0f32.max((3.0 / penetration) * 1.25);
+        let nodraw = enter_trace.surface.flags & SURF_NODRAW;
+        let grate = enter_trace.contents & CONTENTS_GRATE;
+
+        if enter_surface_data.material as u8 as char == CHAR_TEX_GRATE
+            || enter_surface_data.material as u8 as char == CHAR_TEX_GLASS
+        {
             penetration_modifier = 3.0;
-        } else if enter_trace.contents >> 3 & 1 == 0 || enter_trace.surface.flags >> 7 & 1 == 0 {
+            damage_modifier = 0.05;
+        } else if nodraw != 0 || grate != 0 {
             penetration_modifier = 1.0;
+        } else {
+            penetration_modifier = (enter_surface_data.penetration_modifier
+                + exit_surface_data.penetration_modifier)
+                / 2.0;
+            damage_modifier = 0.16;
         }
+
         if enter_surface_data.material == exit_surface_data.material {
-            if exit_surface_data.material == 85 || exit_surface_data.material == 87 {
+            if exit_surface_data.material as u8 as char == CHAR_TEX_CARDBOARD
+                || exit_surface_data.material as u8 as char == CHAR_TEX_WOOD
+            {
                 penetration_modifier = 3.0;
-            } else if exit_surface_data.material == 76 {
+            } else if exit_surface_data.material as u8 as char == CHAR_TEX_PLASTIC {
                 penetration_modifier = 2.0;
             }
         }
 
-        *damage -= (11.25 / penetration / penetration_modifier
+        let trace_len = (exit_trace.end - enter_trace.end).mag();
+        let modifier = 0.0f32.max(1.0 / penetration_modifier);
+        let damage_lost = 11.25 / penetration / penetration_modifier
             + *damage * damage_modifier
-            + (exit_trace.end - enter_trace.end).mag() / 24.0 / penetration_modifier);
+            + (exit_trace.end - enter_trace.end).mag_sqrt() / 24.0 / penetration_modifier;
+        *damage -= damage_lost;
         *start = exit_trace.end;
+        dbg!(*damage);
 
         if *damage < 1.0 {
             return false;

@@ -139,7 +139,7 @@ pub fn scan_netvars() {
     }
 }
 
-pub fn get_offset(table: &str, netvar: &str) -> usize {
+pub fn offset(table: &str, netvar: &str) -> usize {
     let guard = NETVARS.get().unwrap().read().unwrap();
     *guard.get(&*format!("{}->{}", table, netvar)).unwrap_or(&0)
 }
@@ -152,8 +152,8 @@ macro_rules! netvar {
 
     ($table:literal, $name:literal, $func_name:ident, $return_type:ident, $additional_offset:expr) => {
         pub fn $func_name(&self) -> $return_type {
-            use crate::netvar::get_offset;
-            let offset = get_offset($table, $name);
+            use crate::netvar::offset;
+            let offset = offset($table, $name);
             let value = self.get_value::<$return_type>(offset + $additional_offset);
             value
         }

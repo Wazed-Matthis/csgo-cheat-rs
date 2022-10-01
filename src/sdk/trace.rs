@@ -1,8 +1,10 @@
-use std::ffi::c_void;
+use std::ffi::{c_short, c_void};
 
 use vtables::VTable;
 use vtables_derive::{has_vtable, virtual_index, VTable};
+use winapi::ctypes::c_char;
 
+use crate::sdk::structs::entities::CEntity;
 use crate::Vec3;
 
 pub mod hit_group {
@@ -129,8 +131,8 @@ impl Ray {
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct CSurface {
-    pub name: *const i8,
-    pub surface_props: i16,
+    pub name: *const c_char,
+    pub surface_props: c_short,
     pub flags: u16,
 }
 
@@ -139,9 +141,9 @@ pub struct CSurface {
 pub struct CPlane {
     pub normal: Vec3,
     pub dist: f32,
-    pub r#type: u8,
-    pub sign_bit: u8,
-    pad: [u8; 0x2],
+    pub r#type: c_char,
+    pub sign_bit: c_char,
+    pad: [c_char; 0x2],
 }
 
 #[repr(C)]
@@ -158,7 +160,8 @@ pub struct Trace {
     pub fraction_solid_left: f32,
     pub surface: CSurface,
     pub hit_group: i32,
-    pub physics_bone: i16,
+    pub physics_bone: c_short,
+    pub worldSurfaceIndex: u16,
     pub ptr_entity: *const Entity,
     pub hitbox: i32,
 }
@@ -226,6 +229,28 @@ pub const CONTENTS_HITBOX: i32 = 0x40000000;
 pub const SURF_HITBOX: u16 = 0x8000;
 pub const SURF_LIGHT: u16 = 0x0001;
 pub const SURF_NODRAW: u16 = 0x0080;
+
+pub const CHAR_TEX_ANTLION: char = 'A';
+pub const CHAR_TEX_BLOODYFLESH: char = 'B';
+pub const CHAR_TEX_CONCRETE: char = 'C';
+pub const CHAR_TEX_DIRT: char = 'D';
+pub const CHAR_TEX_EGGSHELL: char = 'E';
+pub const CHAR_TEX_FLESH: char = 'F';
+pub const CHAR_TEX_GRATE: char = 'G';
+pub const CHAR_TEX_ALIENFLESH: char = 'H';
+pub const CHAR_TEX_CLIP: char = 'I';
+pub const CHAR_TEX_PLASTIC: char = 'L';
+pub const CHAR_TEX_METAL: char = 'M';
+pub const CHAR_TEX_SAND: char = 'N';
+pub const CHAR_TEX_FOLIAGE: char = 'O';
+pub const CHAR_TEX_COMPUTER: char = 'P';
+pub const CHAR_TEX_SLOSH: char = 'S';
+pub const CHAR_TEX_TILE: char = 'T';
+pub const CHAR_TEX_CARDBOARD: char = 'U';
+pub const CHAR_TEX_VENT: char = 'V';
+pub const CHAR_TEX_WOOD: char = 'W';
+pub const CHAR_TEX_GLASS: char = 'Y';
+pub const CHAR_TEX_WARPSHIELD: char = 'Z';
 
 #[has_vtable]
 #[derive(VTable, Debug)]

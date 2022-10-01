@@ -153,7 +153,7 @@ impl ESP {
                                 Color::new_rgba(255, 255, 255, 255),
                             );
                         }
-                        if let Some(weapon) = ent.get_weapon() {
+                        if let Some(weapon) = ent.weapon() {
                             // Weapon text
                             let display_name_find =
                                 interfaces.localize.find(weapon.get_weapon_data().name);

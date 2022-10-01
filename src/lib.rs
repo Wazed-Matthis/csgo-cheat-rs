@@ -7,11 +7,10 @@ use std::collections::HashMap;
 use std::ffi::{c_char, c_float, c_void, CStr};
 use std::fs::File;
 use std::io::Read;
-use std::panic::PanicInfo;
 use std::path::PathBuf;
-use std::thread::Thread;
+use std::sync::Arc;
 use std::time::Duration;
-use std::{fs, mem, panic, ptr};
+use std::{fs, mem, panic, ptr, thread};
 
 use event_bus::{dispatch_event, EventBus};
 use hook_rs_lib::{function_hook, register_hooks};
@@ -97,7 +96,7 @@ register_features!(
 pub fn initialize() {
     INTERFACES.set(Interfaces::init()).unwrap();
     let mut config_string = String::new();
-    File::open("C:/Users/Lenno/IdeaProjects/csgo-cheat-rs/config.json")
+    File::open("C:/Users/matth/CLionProjects/csgo-cheat-rs/config.json")
         .unwrap()
         .read_to_string(&mut config_string)
         .unwrap();
@@ -122,6 +121,17 @@ pub extern "system" fn DllMain(module: HINSTANCE, fdw_reason: DWORD, _: LPVOID) 
     if fdw_reason == DLL_PROCESS_ATTACH {
         let hmodule = module as usize;
         std::thread::spawn(move || unsafe { entry(hmodule as HINSTANCE) });
+
+        let m = Box::leak(Box::new(hmodule));
+        panic::set_hook(Box::new(|info| {
+            eprintln!("Failed to load schiller hook :C \n\n {}", info);
+            thread::sleep(Duration::from_secs(5));
+            unsafe {
+                uninit_hooks();
+                FreeConsole();
+                FreeLibraryAndExitThread(*m as HINSTANCE, 0);
+            }
+        }));
     }
     1
 }
