@@ -1,7 +1,9 @@
 use crate::font::FontType::{Items, Outline, OutlineBold, Shadow, ShadowBold, Small};
+use crate::sdk::structs::entities::CEntity;
 use crate::{feature, font, sdk, Color, EventPaintTraverse, Vec3, INTERFACES, WEAPON_MAP};
 use color_space::{Hsv, Rgb};
 use std::ffi::{CStr, OsStr};
+use std::mem;
 use widestring::WideCString;
 
 feature!(ESP => ESP::paint_traverse);
@@ -13,7 +15,8 @@ impl ESP {
         for i in 0..interfaces.global_vars.max_clients {
             let entity = interfaces.entity_list.entity(i);
             if let Some(ent) = entity.get() {
-                if ent.health() > 0 {
+                if ent.health() > 0 && interfaces.engine.local_player() != i {
+                    Self::bone_esp(&ent);
                     let collidable = ent.collidable();
                     if let Some(col) = collidable.get() {
                         let origin = ent.abs_origin();
@@ -180,6 +183,50 @@ impl ESP {
                                     Color::new_hex(0xffffffff),
                                 )
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn bone_esp(entity: &CEntity) {
+        let interfaces = INTERFACES.get().unwrap();
+        let mut first_bones = unsafe { mem::zeroed() };
+        unsafe {
+            entity.setup(&mut first_bones, 128, 0x0007FF00, 0.0);
+        }
+        let model_ptr = entity.model();
+        if !model_ptr.is_null() {
+            let studio_model_ptr = interfaces.model_info.studio_model(model_ptr);
+            if !studio_model_ptr.is_null() {
+                unsafe {
+                    let studio_model = &*studio_model_ptr;
+                    for i in 0..studio_model.bone_count {
+                        if let Some(bone) = studio_model.bone(i) {
+                            let parent = bone.parent;
+                            if parent == -1 || bone.flags & 0x00000100 == 0 {
+                                continue;
+                            }
+                            let mut bone_pos = first_bones[i as usize].origin();
+                            let mut parent_bone_pos = first_bones[parent as usize].origin();
+                            let mut bone_screen = bone_pos.clone();
+                            let mut parent_bone_screen = parent_bone_pos.clone();
+                            interfaces
+                                .debug_overlay
+                                .world_to_screen(&mut bone_pos, &mut bone_screen);
+                            interfaces
+                                .debug_overlay
+                                .world_to_screen(&mut parent_bone_pos, &mut parent_bone_screen);
+                            interfaces
+                                .vgui_surface
+                                .set_draw_color(Color::new_hex(0xffffffff));
+                            interfaces.vgui_surface.draw_line(
+                                bone_screen.x as i32,
+                                bone_screen.y as i32,
+                                parent_bone_screen.x as i32,
+                                parent_bone_screen.y as i32,
+                            );
                         }
                     }
                 }

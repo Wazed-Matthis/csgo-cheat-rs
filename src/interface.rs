@@ -10,6 +10,7 @@ use crate::sdk::debug_overlay::DebugOverlay;
 use crate::sdk::engine_prediction::Prediction;
 use crate::sdk::localize::Localize;
 use crate::sdk::panel::Panel;
+use crate::sdk::structs::model::ModelInfo;
 use crate::sdk::surface::Surface;
 use crate::sdk::surface_props::SurfaceProps;
 use crate::sdk::trace::EngineTrace;
@@ -27,7 +28,7 @@ const ENGINE_TRACE: &str = "EngineTraceClient004";
 const _ENGINE_SOUND: &str = "IEngineSoundClient003";
 const _MAT_SYSTEM: &str = "VMaterialSystem080";
 const _MODEL_RENDER: &str = "VEngineModel016";
-const _MODEL_INFO: &str = "VModelInfoClient004";
+const MODEL_INFO: &str = "VModelInfoClient004";
 const LOCALIZE: &str = "Localize_001";
 const PHYS_SURFACE_PROPS: &str = "VPhysicsSurfaceProps001";
 const PREDICTION: &str = "VClientPrediction001";
@@ -48,6 +49,7 @@ pub struct Interfaces {
     pub trace: EngineTrace,
     pub surface_props: SurfaceProps,
     pub localize: Localize,
+    pub model_info: ModelInfo,
 }
 
 unsafe impl Send for Interfaces {}
@@ -74,6 +76,7 @@ impl Interfaces {
                 trace: get_interface("engine.dll", ENGINE_TRACE),
                 surface_props: get_interface("vphysics.dll", PHYS_SURFACE_PROPS),
                 localize: get_interface("localize.dll", LOCALIZE),
+                model_info: get_interface("engine.dll", MODEL_INFO),
             }
         }
     }

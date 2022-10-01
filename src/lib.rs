@@ -75,6 +75,7 @@ pub unsafe fn entry(module: HINSTANCE) {
         std::thread::sleep(Duration::from_millis(5));
         if GetAsyncKeyState(VK_END) != 0 {
             uninit_hooks();
+            std::thread::sleep(Duration::from_secs(2));
             FreeConsole();
             FreeLibraryAndExitThread(module, 0);
             break;

@@ -2,6 +2,7 @@ use std::cmp::max;
 use std::ffi::{c_int, c_void};
 use std::mem;
 use std::mem::size_of;
+use std::ptr::null;
 
 use log::{debug, error};
 use vtables::VTable;
@@ -11,10 +12,13 @@ use crate::get_interfaces;
 use crate::memory::NotNull;
 use crate::sdk::classes::{Matrix3x4, Matrix4x3, Vec2, Vec3};
 use crate::sdk::structs::collidable::Collidable;
+use crate::sdk::structs::model::Model;
 use crate::sdk::structs::weapon::Weapon;
 use crate::{netvar, Client};
 
-type OriginalFn = unsafe extern "thiscall" fn(*mut c_void, *mut Matrix4x3, i32, i32, f32) -> bool;
+type OriginalBoneSetupFn =
+    unsafe extern "thiscall" fn(*mut c_void, *mut Matrix4x3, i32, i32, f32) -> bool;
+type OriginalModelFn = unsafe extern "thiscall" fn(*mut c_void) -> *const Model;
 
 #[has_vtable]
 #[derive(VTable, Debug)]
@@ -45,6 +49,28 @@ impl CEntity {
 
     #[virtual_index(3)]
     pub fn collidable(&self) -> NotNull<Collidable> {}
+
+    pub fn model(&self) -> *const Model {
+        unsafe {
+            let this = self.as_ptr() as *mut c_void;
+            if this.is_null() {
+                return null();
+            }
+            let vtable = this.cast::<*const *const ()>().add(1);
+            if vtable.is_null() {
+                return null();
+            }
+            let offset = (*vtable).add(8);
+            if offset.is_null() {
+                return null();
+            }
+            let f = *(offset).cast::<OriginalModelFn>();
+
+            let arg = vtable.cast::<c_void>();
+
+            f(arg)
+        }
+    }
 
     netvar!("DT_BasePlayer", "m_iHealth", health, i32);
     netvar!("DT_CSPlayer", "m_ArmorValue", armor, i32);
@@ -110,7 +136,7 @@ impl CEntity {
         if offset.is_null() {
             return false;
         }
-        let f = *(offset).cast::<OriginalFn>();
+        let f = *(offset).cast::<OriginalBoneSetupFn>();
 
         let arg = vtable.cast::<c_void>();
 
