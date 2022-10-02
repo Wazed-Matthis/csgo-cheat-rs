@@ -25,6 +25,9 @@ impl ThirdPerson {
 
             unsafe {
                 if let Some(local) = local_player.get() {
+                    if !local.is_alive() {
+                        return;
+                    }
                     let mut angles = ANGLES.read().unwrap().clone();
                     let dead_flag = crate::netvar::offset("DT_BasePlayer", "deadflag");
 
@@ -59,6 +62,9 @@ impl ThirdPerson {
 
         unsafe {
             if let Some(local) = local_player.get() {
+                if !local.is_alive() {
+                    return;
+                }
                 input.m_camera_in_third_person = true;
                 view.fov = 120.0;
                 view.fov_viewmodel = 120.0;
