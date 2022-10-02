@@ -35,7 +35,7 @@ use crate::features::esp::ESP;
 use crate::features::watermark::Watermark;
 use crate::features::Feature;
 use crate::interface::Interfaces;
-use crate::sdk::classes::{CUserCMD, Vec3, ViewSetup};
+use crate::sdk::classes::{CUserCMD, Stage, Vec3, ViewSetup};
 use crate::sdk::client::Client;
 use crate::sdk::engine::EngineClient;
 use crate::sdk::entity_list::EntityList;
@@ -166,7 +166,9 @@ pub extern "fastcall" fn create_move(
     let old_view_angle = a.view_angles.clone();
 
     dispatch_event("main", &mut EventCreateMove { user_cmd });
-
+    let mut guard = features::third_person::ANGLES.write().unwrap();
+    guard.x = a.view_angles.x;
+    guard.y = a.view_angles.y;
     let delta_yaw = (a.view_angles.y - old_view_angle.y).to_radians();
     let forward = a.forward_move;
     let strafe = a.side_move;
@@ -193,7 +195,7 @@ pub extern "fastcall" fn override_view(
 }
 
 #[function_hook(interface = "VClient018", module = "client.dll", index = 37)]
-pub extern "fastcall" fn frame_stage_notify(ecx: *const c_void, edx: *const c_void, stage: i32) {
+pub extern "fastcall" fn frame_stage_notify(ecx: *const c_void, edx: *const c_void, stage: Stage) {
     dispatch_event("main", &mut EventFrameStageNotify { stage });
 
     frame_stage_notify_original(ecx, edx, stage)

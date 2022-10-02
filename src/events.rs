@@ -1,5 +1,6 @@
 use event_bus::Event;
 
+use crate::sdk::classes::Stage;
 use crate::{CUserCMD, ViewSetup};
 
 pub struct EventCreateMove {
@@ -13,7 +14,7 @@ pub struct EventPaintTraverse {}
 impl Event for EventPaintTraverse {}
 
 pub struct EventFrameStageNotify {
-    pub stage: i32,
+    pub stage: Stage,
 }
 
 impl Event for EventFrameStageNotify {}

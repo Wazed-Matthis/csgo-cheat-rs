@@ -4,6 +4,19 @@ use std::ops::{Add, Div, DivAssign, Index, Mul, Sub};
 use bitflags::bitflags;
 use winapi::ctypes::c_char;
 
+#[repr(C)]
+#[derive(Ord, PartialOrd, PartialEq, Eq, Clone, Copy)]
+pub enum Stage {
+    FrameUndefined = -1,
+    FrameStart,
+    FrameNetUpdateStart,
+    FrameNetUpdatePostdataupdateStart,
+    FrameNetUpdatePostdataupdateEnd,
+    FrameNetUpdateEnd,
+    FrameRenderStart,
+    FrameRenderEnd,
+}
+
 bitflags! {
     #[repr(C)]
     pub struct EButtons: i32 {
