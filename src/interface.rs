@@ -13,6 +13,7 @@ use crate::sdk::input::{CInput, Input};
 use crate::sdk::localize::Localize;
 use crate::sdk::panel::Panel;
 use crate::sdk::structs::model::ModelInfo;
+use crate::sdk::structs::view::ViewRender;
 use crate::sdk::surface::Surface;
 use crate::sdk::surface_props::SurfaceProps;
 use crate::sdk::trace::EngineTrace;
@@ -53,6 +54,7 @@ pub struct Interfaces {
     pub localize: Localize,
     pub model_info: ModelInfo,
     pub input: *mut CInput,
+    pub view_render: *mut ViewRender,
 }
 
 unsafe impl Send for Interfaces {}
@@ -87,6 +89,14 @@ impl Interfaces {
                     )
                     .unwrap() as usize
                         + 0x1) as *const *mut CInput,
+                ),
+                view_render: std::ptr::read::<*mut ViewRender>(
+                    (crate::memory::scan_for_signature(
+                        &Signature::from("8B 0D ?? ?? ?? ?? FF 75 0C 8B 45 08".to_owned()),
+                        CString::new("client.dll").unwrap().as_ptr(),
+                    )
+                    .unwrap() as usize
+                        + 2) as *const *mut ViewRender,
                 ),
             }
         }

@@ -41,7 +41,7 @@ pub struct CUserCMD {
     pub command_number: i32,
     pub tick_count: i32,
     pub view_angles: Vec3,
-    pub aim_direction: Vec2,
+    pub aim_direction: Vec3,
     pub forward_move: f32,
     pub side_move: f32,
     pub up_move: f32,
@@ -158,6 +158,14 @@ impl Vec3 {
             z: self.z / mag,
         }
     }
+
+    pub fn crossed(&self, v: Vec3) -> Vec3 {
+        Vec3 {
+            x: (self.y * v.z) - (self.z * v.y),
+            y: (self.z * v.x) - (self.x * v.z),
+            z: (self.x * v.y) - (self.y * v.x),
+        }
+    }
 }
 
 impl Add for Vec3 {
@@ -237,5 +245,4 @@ impl Div<f32> for Vec3 {
 pub struct Vec2 {
     pub x: f32,
     pub y: f32,
-    pub z: f32,
 }

@@ -1,6 +1,7 @@
 use std::ffi::c_char;
 
 use crate::font::HFONT;
+use crate::sdk::classes::Vec2;
 use vtables::VTable;
 use vtables_derive::*;
 use winapi::ctypes::wchar_t;
@@ -18,6 +19,22 @@ pub struct Color {
     pub g: i32,
     pub b: i32,
     pub a: i32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Vertex {
+    pub position: Vec2,
+    pub texCoord: Vec2,
+}
+
+impl Vertex {
+    pub fn pos(position: Vec2) -> Self {
+        Vertex {
+            position,
+            texCoord: Vec2 { x: 0.0, y: 0.0 },
+        }
+    }
 }
 
 impl Color {
@@ -98,4 +115,7 @@ impl Surface {
 
     #[virtual_index(25)]
     pub fn text_color(&self, color: Color) {}
+
+    #[virtual_index(106)]
+    pub fn draw_polygon(&self, amount: i32, vertices: *mut Vertex, clip_vertices: bool) {}
 }

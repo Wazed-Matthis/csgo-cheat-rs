@@ -1,9 +1,13 @@
 use crate::font::FontType::{Items, Outline, OutlineBold, Shadow, ShadowBold, Small};
+use crate::sdk::classes::Vec2;
 use crate::sdk::structs::entities::CEntity;
-use crate::{feature, font, sdk, Color, EventPaintTraverse, Vec3, INTERFACES, WEAPON_MAP};
+use crate::sdk::surface::Vertex;
+use crate::{feature, font, math, sdk, Color, EventPaintTraverse, Vec3, INTERFACES, WEAPON_MAP};
 use color_space::{Hsv, Rgb};
+use std::f32::consts::PI;
 use std::ffi::{CStr, OsStr};
 use std::mem;
+use std::mem::zeroed;
 use widestring::WideCString;
 
 feature!(ESP => ESP::paint_traverse);
@@ -25,6 +29,7 @@ impl ESP {
                     && i != interfaces.engine.local_player()
                     && ent.team() != local_player.team()
                 {
+                    Self::off_screen_esp(&ent);
                     Self::bone_esp(&ent);
                     let collidable = ent.collidable();
                     if let Some(col) = collidable.get() {
@@ -199,7 +204,104 @@ impl ESP {
         }
     }
 
-    pub fn off_screen_esp(entity: &CEntity) {}
+    pub fn off_screen_esp(entity: &CEntity) {
+        let interfaces = INTERFACES.get().unwrap();
+        let local_player = interfaces
+            .entity_list
+            .entity(interfaces.engine.local_player())
+            .get()
+            .unwrap();
+        let mut target_pos = entity.origin();
+        let mut screen_pos = target_pos.clone();
+        interfaces
+            .debug_overlay
+            .world_to_screen(&mut target_pos, &mut screen_pos);
+        let mut screen_w = 0;
+        let mut screen_h = 0;
+        interfaces.engine.screen_size(&mut screen_w, &mut screen_h);
+        let tolerance_x = screen_w as f32 / 18f32;
+        let tolerance_y = screen_h as f32 / 18f32;
+
+        if screen_pos.x < -tolerance_x
+            || screen_pos.x > (screen_w as f32 + tolerance_x)
+            || screen_pos.y < -tolerance_y
+            || screen_pos.y > (screen_h as f32 + tolerance_y)
+        {
+            let pos_data =
+                Self::get_offscreen_pos((target_pos - local_player.origin()).normalized());
+
+            let position = pos_data.0;
+            let rotation = (-pos_data.1.to_radians()).to_degrees();
+            let base = math::rotate_vertex(
+                position,
+                Vertex::pos(Vec2 {
+                    x: position.x,
+                    y: position.y,
+                }),
+                rotation,
+            );
+            let left = math::rotate_vertex(
+                position,
+                Vertex::pos(Vec2 {
+                    x: position.x - 12.0,
+                    y: position.y + 24.0,
+                }),
+                rotation,
+            );
+            let right = math::rotate_vertex(
+                position,
+                Vertex::pos(Vec2 {
+                    x: position.x + 12.0,
+                    y: position.y + 24.0,
+                }),
+                rotation,
+            );
+            let mut vec = [base, left, right];
+
+            unsafe {
+                let vertex_ptr = vec.as_mut_ptr();
+                interfaces
+                    .vgui_surface
+                    .set_draw_color(Color::new_hex(0xffffffff));
+                interfaces.vgui_surface.draw_polygon(3, vertex_ptr, true);
+            }
+        }
+    }
+
+    pub fn get_offscreen_pos(delta: Vec3) -> (Vec2, f32) {
+        let interfaces = INTERFACES.get().unwrap();
+        let mut screen_w = 0;
+        let mut screen_h = 0;
+        interfaces.engine.screen_size(&mut screen_w, &mut screen_h);
+        let radius: f32 = 150.0 * (screen_h as f32 / 480.0);
+        let mut view_angles = unsafe { zeroed::<Vec3>() };
+        interfaces.engine.get_view_angles(&mut view_angles);
+        let up = Vec3 {
+            x: 0f32,
+            y: 0f32,
+            z: 1f32,
+        };
+        let mut fwd = math::forward_angle_vectors(view_angles);
+        fwd.z = 0f32;
+        fwd = fwd.normalized();
+        let right = up.crossed(fwd);
+        let front = delta.dot(fwd);
+        let side = delta.dot(right);
+        let mut output = Vec2 {
+            x: radius * -side,
+            y: radius * -front,
+        };
+        // Calculate the offsets used for offsetting from screen center
+        let out_rotation = (output.x.atan2(output.y) + PI).to_degrees();
+        let yaw_rad = -out_rotation.to_radians();
+        let sa = yaw_rad.sin();
+        let ca = yaw_rad.cos();
+        // Offset from the screen center
+        output.x = (screen_w as f32 / 2f32) + (radius * sa);
+        output.y = (screen_h as f32 / 2f32) - (radius * ca);
+        // Return the results
+        (output, out_rotation)
+    }
 
     pub fn bone_esp(entity: &CEntity) {
         let interfaces = INTERFACES.get().unwrap();

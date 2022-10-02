@@ -145,9 +145,9 @@ impl Aimbot {
                 cmd.forward_move = yaw.cos() * speed - yaw.sin() * speed;
                 cmd.side_move = yaw.sin() * speed + yaw.cos() * speed;
 
-                if speed < weapon_data.max_speed / 5.0 {
-                    cmd.buttons |= EButtons::ATTACK;
-                }
+                // if speed < weapon_data.max_speed / 5.0 {
+                cmd.buttons |= EButtons::ATTACK;
+                // }
             }
         }
     }
