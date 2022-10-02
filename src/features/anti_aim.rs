@@ -15,8 +15,8 @@ impl AntiAim {
             // Check if the in_attack button is currently being pressed, if not, set the antiAim yaw
             if !a.buttons.contains(EButtons::ATTACK) {
                 let guard = CONFIG.get().unwrap();
-                // a.view_angles.x = guard.features.AntiAim.pitch;
-                // a.view_angles.y = new_yaw;
+                a.view_angles.x = guard.features.AntiAim.pitch;
+                a.view_angles.y = new_yaw;
             }
         }
     }
