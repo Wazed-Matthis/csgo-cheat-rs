@@ -162,7 +162,7 @@ pub struct Trace {
     pub hit_group: i32,
     pub physics_bone: c_short,
     pub worldSurfaceIndex: u16,
-    pub ptr_entity: *const Entity,
+    pub ptr_entity: *const CEntity,
     pub hitbox: i32,
 }
 

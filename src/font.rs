@@ -107,7 +107,7 @@ pub fn setup_fonts() {
         items as HFONT,
         lpcstr!("Counter-Strike"),
         28,
-        1000,
+        10,
         0,
         0,
         (FontFlags::ANTI_ALIAS | FontFlags::DROP_SHADOW).bits(),

@@ -49,7 +49,10 @@ impl Aimbot {
                 (entity.get())
             })
             .filter(|(entity)| {
-                entity.is_player() && entity.is_alive() && entity.as_ptr() != local_player.as_ptr()
+                entity.is_player()
+                    && entity.is_alive()
+                    && entity.as_ptr() != local_player.as_ptr()
+                    && entity.team() != local_player.team()
             })
             .collect::<Vec<CEntity>>();
 
@@ -114,22 +117,22 @@ impl Aimbot {
             let (damage, hitgroup, lethal) =
                 Self::handle_wall(&local_player, closest_eye_pos, weapon_data, closest, 0);
 
-            debug!(
-                "Damage: {}, hitgroup: {:?}, is lethal: {}",
-                damage, hitgroup, lethal
-            );
-
             let guard = CONFIG.get().unwrap();
             let aimbot_settings = guard.features.Aimbot.clone();
 
             if damage > aimbot_settings.min_damage
-                && local_player.weapon().unwrap().next_attack() + 0.2
-                    < interfaces.global_vars.cur_time
+                || lethal
+                    && local_player.weapon().unwrap().next_attack() + 0.2
+                        < interfaces.global_vars.cur_time
             {
                 let (yaw, pitch) =
                     Aimbot::calculate_angle_to_entity(closest_eye_pos, local_eye_pos);
                 cmd.view_angles.x = pitch;
                 cmd.view_angles.y = yaw;
+                debug!(
+                    "Damage: {}, hitgroup: {:?}, is lethal: {}",
+                    damage, hitgroup, lethal
+                );
 
                 let mut velocity = local_player.velocity() * -1.0;
 
@@ -171,14 +174,14 @@ impl Aimbot {
             let bonus_ratio = 0.5f32;
             let ratio = armor_ratio * 0.05;
 
-            damage -= if (armor as f32) < damage * armor_ratio / 2.0 {
+            damage -= if (armor as f32) < damage * armor_ratio {
                 armor as f32 * 4.0
             } else {
                 damage * (1.0 - armor_ratio)
             };
         }
 
-        damage.floor()
+        damage
     }
 
     fn handle_wall(
@@ -213,7 +216,7 @@ impl Aimbot {
             let mut filter = TraceFilterGeneric::new(local_player.as_ptr());
             interfaces.trace.trace_ray_virtual(
                 &ray,
-                MASK_SHOT as u32,
+                0x4600400B,
                 &mut filter as *mut TraceFilterGeneric as *mut usize,
                 &mut trace,
             );
@@ -225,38 +228,18 @@ impl Aimbot {
 
             // Update damage based on the distance traveled
             distance += trace.fraction * remaining;
-            damage *= Self::scale_damage(
+            let scale = Self::scale_damage(
                 target,
                 trace.hit_group,
                 weapon_data.headshot_mult,
                 weapon_data.armor_ratio / 2.0,
-            ) * weapon_data.range_modifier.powf(distance / 500f32);
+            );
+            damage *= scale * weapon_data.range_modifier.powf(distance / 500f32);
 
             let group = HitGroup::try_from(trace.hit_group).unwrap_or(HitGroup::Invalid);
 
-            if trace.ptr_entity == target.as_ptr() as _
-                && group > HitGroup::Generic
-                && group < HitGroup::RightLeg
-            {
-                if target.health() < damage as i32 {
-                    return (damage, group, true);
-                }
-
-                debug!(
-                    "Penetrating {} with {} ",
-                    unsafe { CStr::from_ptr(trace.surface.name).to_str().unwrap() },
-                    pen
-                );
-
-                let aimbot_settings = CONFIG.get().unwrap().features.Aimbot.clone();
-
-                if damage > aimbot_settings.min_damage {
-                    return (damage, group, false);
-                }
-
-                if damage >= target.health() as f32 {
-                    return (damage, group, true);
-                }
+            if trace.ptr_entity == target.as_ptr() as _ {
+                return (damage, group, target.health() <= damage as _);
             }
 
             let surface_data = interfaces
@@ -411,12 +394,10 @@ impl Aimbot {
 
         let trace_len = (exit_trace.end - enter_trace.end).mag();
         let modifier = 0.0f32.max(1.0 / penetration_modifier);
-        let damage_lost = 11.25 / penetration / penetration_modifier
-            + *damage * damage_modifier
-            + (exit_trace.end - enter_trace.end).mag_sqrt() / 24.0 / penetration_modifier;
+        let damage_lost = ((modifier * 3.0) * penetration_mod + (*damage * damage_modifier))
+            + (((trace_len * trace_len) * modifier) / 24.0);
         *damage -= damage_lost;
         *start = exit_trace.end;
-        dbg!(*damage);
 
         if *damage < 1.0 {
             return false;

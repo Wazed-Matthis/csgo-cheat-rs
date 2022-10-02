@@ -13,7 +13,7 @@ impl AntiAim {
             let new_yaw = rng.gen::<f32>() * 360.0 - 180.0;
 
             // Check if the in_attack button is currently being pressed, if not, set the antiAim yaw
-            if a.buttons.contains(EButtons::ATTACK) {
+            if !a.buttons.contains(EButtons::ATTACK) {
                 let guard = CONFIG.get().unwrap();
                 a.view_angles.x = guard.features.AntiAim.pitch;
                 a.view_angles.y = new_yaw;
