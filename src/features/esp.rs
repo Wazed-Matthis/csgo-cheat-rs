@@ -11,11 +11,20 @@ feature!(ESP => ESP::paint_traverse);
 impl ESP {
     pub fn paint_traverse(_: &mut EventPaintTraverse) {
         let interfaces = INTERFACES.get().unwrap();
+        let local_player = interfaces
+            .entity_list
+            .entity(interfaces.engine.local_player())
+            .get()
+            .unwrap();
 
         for i in 0..interfaces.global_vars.max_clients {
             let entity = interfaces.entity_list.entity(i);
             if let Some(ent) = entity.get() {
-                if ent.health() > 0 && interfaces.engine.local_player() != i {
+                if ent.is_player()
+                    && ent.is_alive()
+                    && i != interfaces.engine.local_player()
+                    && ent.team() != local_player.team()
+                {
                     Self::bone_esp(&ent);
                     let collidable = ent.collidable();
                     if let Some(col) = collidable.get() {
@@ -189,6 +198,8 @@ impl ESP {
             }
         }
     }
+
+    pub fn off_screen_esp(entity: &CEntity) {}
 
     pub fn bone_esp(entity: &CEntity) {
         let interfaces = INTERFACES.get().unwrap();
