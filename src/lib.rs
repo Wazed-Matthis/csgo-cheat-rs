@@ -26,7 +26,7 @@ use winapi::um::winnt::DLL_PROCESS_ATTACH;
 use winapi::um::winuser::{GetAsyncKeyState, VK_END};
 
 use crate::config::Configuration;
-use crate::events::{EventCreateMove, EventPaintTraverse};
+use crate::events::{EventCreateMove, EventFrameStageNotify, EventPaintTraverse};
 use crate::features::aimbot::Aimbot;
 use crate::features::anti_aim::AntiAim;
 use crate::features::esp::ESP;
@@ -82,6 +82,8 @@ pub unsafe fn entry(module: HINSTANCE) {
         }
     }
 }
+use features::third_person::ThirdPerson;
+
 register_features!(
     AntiAimSettings => AntiAim {
         pitch: f32
@@ -91,7 +93,8 @@ register_features!(
         fov: f32
     },
     ESPSettings => ESP {},
-    WatermarkSettings => Watermark {}
+    WatermarkSettings => Watermark {},
+    ThirdPersonSettings => ThirdPerson {}
 );
 
 pub fn initialize() {
@@ -173,6 +176,8 @@ pub extern "fastcall" fn create_move(
 
 #[function_hook(interface = "VClient018", module = "client.dll", index = 37)]
 pub extern "fastcall" fn frame_stage_notify(ecx: *const c_void, edx: *const c_void, stage: i32) {
+    dispatch_event("main", &mut EventFrameStageNotify { stage });
+
     frame_stage_notify_original(ecx, edx, stage)
 }
 

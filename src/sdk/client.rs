@@ -1,10 +1,10 @@
 use std::ffi::c_char;
 
+use crate::netvar::RecvTable;
 use vtables::VTable;
 use vtables_derive::has_vtable;
 use vtables_derive::virtual_index;
 use vtables_derive::VTable;
-use crate::netvar::RecvTable;
 
 #[repr(C)]
 pub struct ClientClass {
@@ -17,7 +17,7 @@ pub struct ClientClass {
 }
 
 #[has_vtable]
-#[derive(VTable, Debug)]
+#[derive(VTable, Debug, Clone)]
 pub struct Client {}
 
 impl Client {

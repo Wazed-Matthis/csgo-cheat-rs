@@ -1,13 +1,15 @@
-use std::ffi::{c_char, c_int, c_void};
+use std::ffi::{c_char, c_int, c_void, CStr, CString};
 use std::mem::transmute;
 use std::ptr::null_mut;
 
+use hook_rs_lib::signature_scan::Signature;
 use log::debug;
 use vtables::VTable;
 use winapi::um::libloaderapi::{GetModuleHandleA, GetProcAddress};
 
 use crate::sdk::debug_overlay::DebugOverlay;
 use crate::sdk::engine_prediction::Prediction;
+use crate::sdk::input::{CInput, Input};
 use crate::sdk::localize::Localize;
 use crate::sdk::panel::Panel;
 use crate::sdk::structs::model::ModelInfo;
@@ -21,7 +23,7 @@ const ENTITY_LIST: &str = "VClientEntityList003";
 const ENGINE: &str = "VEngineClient014";
 const VGUI_PANEL: &str = "VGUI_Panel009";
 const VGUI_SURFACE: &str = "VGUI_Surface031";
-const _INPUT_SYSTEM: &str = "InputSystemVersion001";
+const INPUT_SYSTEM: &str = "InputSystemVersion001";
 const _RENDER_VIEW: &str = "VEngineRenderView014";
 const _CVAR: &str = "VEngineCvar007";
 const ENGINE_TRACE: &str = "EngineTraceClient004";
@@ -50,6 +52,7 @@ pub struct Interfaces {
     pub surface_props: SurfaceProps,
     pub localize: Localize,
     pub model_info: ModelInfo,
+    pub input: *mut CInput,
 }
 
 unsafe impl Send for Interfaces {}
@@ -77,6 +80,14 @@ impl Interfaces {
                 surface_props: get_interface("vphysics.dll", PHYS_SURFACE_PROPS),
                 localize: get_interface("localize.dll", LOCALIZE),
                 model_info: get_interface("engine.dll", MODEL_INFO),
+                input: std::ptr::read::<*mut CInput>(
+                    (crate::memory::scan_for_signature(
+                        &Signature::from("B9 ?? ?? ?? ?? 8B 40 38 FF D0 84 C0 0F 85".to_owned()),
+                        CString::new("client.dll").unwrap().as_ptr(),
+                    )
+                    .unwrap() as usize
+                        + 0x1) as *const *mut CInput,
+                ),
             }
         }
     }

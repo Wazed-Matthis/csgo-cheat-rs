@@ -4,6 +4,7 @@ pub mod aimbot;
 pub mod anti_aim;
 pub mod esp;
 pub mod watermark;
+pub mod third_person;
 
 pub trait Feature: Send + Sync + Debug {
     fn new() -> Self
