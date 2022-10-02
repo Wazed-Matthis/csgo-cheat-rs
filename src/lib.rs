@@ -49,6 +49,7 @@ pub mod features;
 pub mod font;
 pub mod interface;
 pub mod macros;
+pub mod math;
 pub mod memory;
 pub mod netvar;
 pub mod sdk;
@@ -102,7 +103,7 @@ register_features!(
 pub fn initialize() {
     INTERFACES.set(Interfaces::init()).unwrap();
     let mut config_string = String::new();
-    File::open("C:/Users/matth/CLionProjects/csgo-cheat-rs/config.json")
+    File::open("C:/Users/Lenno/IdeaProjects/csgo-cheat-rs/config.json")
         .unwrap()
         .read_to_string(&mut config_string)
         .unwrap();
