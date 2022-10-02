@@ -1,24 +1,33 @@
-use crate::{feature, EventCreateMove, EventFrameStageNotify, Vec3, INTERFACES};
+use crate::{feature, EventFrameStageNotify, EventOverrideView, Vec3, INTERFACES};
+use std::mem;
 
-feature!(ThirdPerson => ThirdPerson::create_move, ThirdPerson::fns);
+feature!(ThirdPerson => ThirdPerson::override_view);
 
 impl ThirdPerson {
-    pub fn create_move(event: &mut EventCreateMove) {}
-
-    pub fn fns(event: &mut EventFrameStageNotify) {
+    pub fn override_view(event: &mut EventOverrideView) {
         let interfaces = INTERFACES.get().unwrap();
+        if event.setup.is_null() {
+            return;
+        }
+        let view = unsafe { &mut *event.setup };
+        dbg!(interfaces.input);
         let mut input = unsafe { &mut *interfaces.input };
         let local_player = interfaces
             .entity_list
             .entity(interfaces.engine.local_player());
-        if let Some(local) = local_player.get() {
-            input.m_camera_in_third_person = true;
+        if !interfaces.engine.is_in_game() {
+            return;
+        }
 
-            input.m_camera_offset = Vec3 {
-                x: -89.0,
-                y: 0.0,
-                z: 0.0,
-            }
+        if let Some(local) = local_player.get() {
+            input.m_camera_in_third_person = false;
+            view.fov = 120.0;
+            view.fov_viewmodel = 120.0;
+            let mut angels = unsafe { mem::zeroed() };
+            interfaces.engine.get_view_angles(&mut angels);
+            angels.z = 100.0;
+            view.aspect_ratio = 0.5;
+            input.m_camera_offset = angels;
         }
     }
 }

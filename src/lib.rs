@@ -26,14 +26,16 @@ use winapi::um::winnt::DLL_PROCESS_ATTACH;
 use winapi::um::winuser::{GetAsyncKeyState, VK_END};
 
 use crate::config::Configuration;
-use crate::events::{EventCreateMove, EventFrameStageNotify, EventPaintTraverse};
+use crate::events::{
+    EventCreateMove, EventFrameStageNotify, EventOverrideView, EventPaintTraverse,
+};
 use crate::features::aimbot::Aimbot;
 use crate::features::anti_aim::AntiAim;
 use crate::features::esp::ESP;
 use crate::features::watermark::Watermark;
 use crate::features::Feature;
 use crate::interface::Interfaces;
-use crate::sdk::classes::{CUserCMD, Vec3};
+use crate::sdk::classes::{CUserCMD, Vec3, ViewSetup};
 use crate::sdk::client::Client;
 use crate::sdk::engine::EngineClient;
 use crate::sdk::entity_list::EntityList;
@@ -174,6 +176,22 @@ pub extern "fastcall" fn create_move(
     false
 }
 
+#[function_hook(
+    interface = "VClient018",
+    module = "client.dll",
+    index = 18,
+    init = r#"**(((*((*(interface as PtrPtr<usize>)).add(10))) + 5) as PtrPtrPtr<usize>)"#
+)]
+pub extern "fastcall" fn override_view(
+    ecx: *const c_void,
+    edx: *const c_void,
+    setup: *mut ViewSetup,
+) -> bool {
+    dispatch_event("main", &mut EventOverrideView { setup });
+
+    override_view_original(ecx, edx, setup)
+}
+
 #[function_hook(interface = "VClient018", module = "client.dll", index = 37)]
 pub extern "fastcall" fn frame_stage_notify(ecx: *const c_void, edx: *const c_void, stage: i32) {
     dispatch_event("main", &mut EventFrameStageNotify { stage });
@@ -201,4 +219,9 @@ pub extern "fastcall" fn paint_traverse(
     }
 }
 
-register_hooks!(create_move, frame_stage_notify, paint_traverse);
+register_hooks!(
+    create_move,
+    frame_stage_notify,
+    paint_traverse,
+    override_view
+);

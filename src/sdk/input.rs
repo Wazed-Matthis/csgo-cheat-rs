@@ -8,7 +8,7 @@ use crate::{CUserCMD, Vec3};
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct CInput {
-    _pad3: [c_char; 0xB],
+    _pad3: [c_char; 0x8],
     pub m_trackir: bool,
     pub m_mouse_init: bool,
     pub m_mouse_active: bool,

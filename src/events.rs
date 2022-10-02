@@ -1,6 +1,6 @@
 use event_bus::Event;
 
-use crate::CUserCMD;
+use crate::{CUserCMD, ViewSetup};
 
 pub struct EventCreateMove {
     pub user_cmd: *mut CUserCMD,
@@ -13,7 +13,13 @@ pub struct EventPaintTraverse {}
 impl Event for EventPaintTraverse {}
 
 pub struct EventFrameStageNotify {
-    pub stage: i32
+    pub stage: i32,
 }
 
 impl Event for EventFrameStageNotify {}
+
+pub struct EventOverrideView {
+    pub setup: *mut ViewSetup,
+}
+
+impl Event for EventOverrideView {}

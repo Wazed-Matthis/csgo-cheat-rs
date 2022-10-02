@@ -2,6 +2,7 @@ use std::f32::EPSILON;
 use std::ops::{Add, Div, DivAssign, Index, Mul, Sub};
 
 use bitflags::bitflags;
+use winapi::ctypes::c_char;
 
 bitflags! {
     #[repr(C)]
@@ -40,6 +41,45 @@ pub struct CUserCMD {
     pub mouse_dy: i16,
     pub has_been_predicted: bool,
     pub pad: [u8; 0x18],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct ViewSetup {
+    pub x: i32,
+    pub unscaled_x: i32,
+    pub y: i32,
+    pub unscaled_y: i32,
+    pub width: i32,
+    pub unscaled_width: i32,
+    pub height: i32,
+    pub unscaled_height: i32,
+    pub stereo_eye: i32,
+    pub _pad0x24: [c_char; 0x78],
+    pub ortho: bool,
+    pub ortho_left: f32,
+    pub ortho_top: f32,
+    pub ortho_right: f32,
+    pub ortho_bottom: f32,
+    pub fov: f32,
+    pub fov_viewmodel: f32,
+    pub origin: Vec3,
+    pub angles: Vec3,
+    pub z_near: f32,
+    pub z_far: f32,
+    pub z_near_viewmodel: f32,
+    pub z_far_viewmodel: f32,
+    pub render_to_subrect_of_larger_screen: bool,
+    pub aspect_ratio: f32,
+    pub off_center: bool,
+    pub off_center_top: f32,
+    pub off_center_bottom: f32,
+    pub off_center_left: f32,
+    pub off_center_right: f32,
+    pub do_bloom_and_tone_mapping: bool,
+    pub cache_full_scene_state: bool,
+    pub view_to_projection_override: bool,
+    pub view_to_projection: Matrix3x4,
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Copy)]
