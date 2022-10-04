@@ -1,6 +1,5 @@
 use crate::font::FontType::Shadow;
 use crate::{feature, font, Color, EventPaintTraverse, INTERFACES};
-use std::fmt::format;
 
 feature!(Watermark => Watermark::paint_traverse);
 

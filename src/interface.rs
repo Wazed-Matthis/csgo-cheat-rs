@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, c_void, CStr, CString};
+use std::ffi::{c_char, c_int, c_void, CString};
 use std::mem::transmute;
 use std::ptr::null_mut;
 
@@ -9,7 +9,7 @@ use winapi::um::libloaderapi::{GetModuleHandleA, GetProcAddress};
 
 use crate::sdk::debug_overlay::DebugOverlay;
 use crate::sdk::engine_prediction::Prediction;
-use crate::sdk::input::{CInput, Input};
+use crate::sdk::input::CInput;
 use crate::sdk::localize::Localize;
 use crate::sdk::panel::Panel;
 use crate::sdk::structs::model::ModelInfo;

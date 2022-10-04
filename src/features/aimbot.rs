@@ -1,28 +1,24 @@
 use std::cmp::Ordering;
-use std::ffi::CStr;
 use std::mem;
 use std::mem::zeroed;
-use std::process::exit;
 use std::ptr::null_mut;
 
 use log::debug;
 use vtables::VTable;
-use winapi::um::winbase::BuildCommDCBAndTimeoutsA;
-use winapi::um::winnt::INT;
 
-use crate::sdk::classes::{EButtons, Matrix3x4, Matrix4x3};
+use crate::sdk::classes::EButtons;
 use crate::sdk::structs::entities::CEntity;
-use crate::sdk::structs::weapon::{Weapon, WeaponInfo};
-use crate::sdk::surface::Surface;
+use crate::sdk::structs::weapon::WeaponInfo;
+
 use crate::sdk::surface_props::SurfaceData;
+use crate::sdk::trace::hit_group::HitGroup;
 use crate::sdk::trace::hit_group::HitGroup::Invalid;
-use crate::sdk::trace::hit_group::{get_damage_multiplier, HitGroup};
 use crate::sdk::trace::{
-    CSurface, Ray, Trace, TraceFilterGeneric, TraceFilterTrait, CHAR_TEX_CARDBOARD, CHAR_TEX_GLASS,
+    Ray, Trace, TraceFilterGeneric, TraceFilterTrait, CHAR_TEX_CARDBOARD, CHAR_TEX_GLASS,
     CHAR_TEX_GRATE, CHAR_TEX_PLASTIC, CHAR_TEX_WOOD, CONTENTS_GRATE, CONTENTS_HITBOX, MASK_SHOT,
     MASK_SHOT_HULL, SURF_HITBOX, SURF_NODRAW,
 };
-use crate::{feature, EventCreateMove, FeatureSettings, Vec3, CONFIG, INTERFACES};
+use crate::{feature, EventCreateMove, Vec3, CONFIG, INTERFACES};
 
 feature!(Aimbot => Aimbot::create_move);
 
@@ -46,9 +42,9 @@ impl Aimbot {
         let mut possible_targets = (0..interfaces.global_vars.max_clients)
             .flat_map(|i| {
                 let entity = interfaces.entity_list.entity(i);
-                (entity.get())
+                entity.get()
             })
-            .filter(|(entity)| {
+            .filter(|entity| {
                 entity.is_player()
                     && entity.is_alive()
                     && entity.as_ptr() != local_player.as_ptr()

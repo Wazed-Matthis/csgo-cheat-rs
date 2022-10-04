@@ -2,15 +2,11 @@
 
 extern crate core;
 
-use std::any::Any;
-use std::collections::HashMap;
 use std::ffi::{c_char, c_float, c_void, CStr};
 use std::fs::File;
 use std::io::Read;
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Duration;
-use std::{fs, mem, panic, ptr, thread};
+use std::{mem, panic, ptr, thread};
 
 use event_bus::{dispatch_event, EventBus};
 use hook_rs_lib::{function_hook, register_hooks};

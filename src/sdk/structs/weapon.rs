@@ -1,7 +1,6 @@
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::ffi::c_char;
-use std::mem::transmute;
 
 use vtables::VTable;
 use vtables_derive::{has_vtable, virtual_index, VTable};
