@@ -102,6 +102,33 @@ pub struct Vec3 {
     pub z: f32,
 }
 
+impl Vec3 {
+    // 2D rot matrix: mat2(c, -s, s, c)
+    pub fn rotate(self, axis: usize, angle: f32) -> Self {
+        match axis {
+            // rotate around x axis
+            0 => Self {
+                x: self.x,
+                y: self.y * angle.cos() - self.z * angle.sin(),
+                z: self.y * angle.sin() + self.z * angle.cos(),
+            },
+            // rotate around y axis
+            1 => Self {
+                x: self.x * angle.cos() - self.z * angle.sin(),
+                y: self.y,
+                z: self.x * angle.sin() + self.z * angle.cos(),
+            },
+            // rotate around z axis
+            2 => Self {
+                x: self.x * angle.cos() - self.y * angle.sin(),
+                y: self.x * angle.sin() + self.y * angle.cos(),
+                z: self.z,
+            },
+            _ => panic!("breh"),
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct Matrix4x3 {

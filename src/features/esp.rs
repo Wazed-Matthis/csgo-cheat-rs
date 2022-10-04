@@ -21,7 +21,7 @@ impl ESP {
             .entity_list
             .entity(interfaces.engine.local_player())
             .get();
-        
+
         let local_player = if let Some(ent) = option {
             ent
         } else {
@@ -318,7 +318,7 @@ impl ESP {
         let interfaces = INTERFACES.get().unwrap();
         let mut first_bones = unsafe { mem::zeroed() };
         unsafe {
-            entity.setup(&mut first_bones, 128, 0x0007FF00, 0.0);
+            entity.setup_bones(&mut first_bones, 128, 0x0007FF00, 0.0);
         }
         let model_ptr = entity.model();
         if !model_ptr.is_null() {

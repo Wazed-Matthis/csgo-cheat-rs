@@ -111,8 +111,10 @@ impl CEntity {
             .entity_from_handle::<Weapon>(self.active_weapon())
     }
 
+    /// Returns the cs:go bone matrices
+    ///
     /// # Safety
-    pub unsafe fn setup(
+    pub unsafe fn setup_bones(
         &self,
         out: &mut [Matrix4x3; 256],
         max_bones: c_int,

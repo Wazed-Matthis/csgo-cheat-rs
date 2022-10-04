@@ -30,18 +30,11 @@ impl Aimbot {
             .entity(interfaces.engine.local_player())
             .get()
             .unwrap();
-        let mut local_eye_pos = Vec3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        };
-        local_player.eye_pos(&mut local_eye_pos);
+        let mut player_eye_pos = unsafe { zeroed() };
+        local_player.eye_pos(&mut player_eye_pos);
 
         let mut possible_targets = (0..interfaces.global_vars.max_clients)
-            .flat_map(|i| {
-                let entity = interfaces.entity_list.entity(i);
-                entity.get()
-            })
+            .filter_map(|i| interfaces.entity_list.entity(i).get())
             .filter(|entity| {
                 entity.is_player()
                     && entity.is_alive()
@@ -57,20 +50,20 @@ impl Aimbot {
         possible_targets.sort_by(|entity, entity1| {
             let mut first_bones = unsafe { zeroed() };
             unsafe {
-                entity.setup(&mut first_bones, 255, 255, 0.0);
+                entity.setup_bones(&mut first_bones, 255, 255, 0.0);
             }
             let first_head_bone = first_bones[8].origin();
 
             let mut second_bones = unsafe { zeroed() };
             unsafe {
-                entity1.setup(&mut second_bones, 255, 255, 0.0);
+                entity1.setup_bones(&mut second_bones, 255, 255, 0.0);
             }
             let second_head_bone = second_bones[8].origin();
 
             let (first_yaw, first_pitch) =
-                Aimbot::calculate_angle_to_entity(first_head_bone, local_eye_pos);
+                Aimbot::calculate_angle_to_entity(first_head_bone, player_eye_pos);
             let (second_yaw, second_pitch) =
-                Aimbot::calculate_angle_to_entity(second_head_bone, local_eye_pos);
+                Aimbot::calculate_angle_to_entity(second_head_bone, player_eye_pos);
 
             let current_yaw = view_angles.y;
             let current_pitch = view_angles.x;
@@ -102,44 +95,73 @@ impl Aimbot {
         };
 
         if let Some(closest) = closest_target {
-            let mut mat = unsafe { zeroed() };
-            unsafe {
-                closest.setup(&mut mat, 255, 255, 0.0);
-            }
-            let closest_eye_pos = mat[8].origin();
-
-            let (damage, hit_group, lethal) =
-                Self::handle_wall(&local_player, closest_eye_pos, weapon_data, closest);
-
             let guard = CONFIG.get().unwrap();
             let aimbot_settings = &guard.features.Aimbot;
 
-            if (damage > aimbot_settings.min_damage || lethal)
-                && local_player.weapon().unwrap().next_attack() < interfaces.global_vars.cur_time
-            {
-                let (yaw, pitch) =
-                    Aimbot::calculate_angle_to_entity(closest_eye_pos, local_eye_pos);
-                let punch = local_player.aim_punch();
-                cmd.view_angles.x = pitch - punch.x * 2.0;
-                cmd.view_angles.y = yaw - punch.y * 2.0;
+            let mut bone_matrices = unsafe { zeroed() };
+            unsafe {
+                closest.setup_bones(&mut bone_matrices, 255, 255, 0.0);
+            }
+            let shoot_pos = bone_matrices[3].origin();
 
-                debug!(
-                    "Damage: {}, hitgroup: {:?}, is lethal: {}",
-                    damage, hit_group, lethal
+            // this code generates equidistant points on 2D circle
+            const PHI: f32 = 1.6180339;
+            const TAU: f32 = std::f32::consts::TAU;
+            const ITERS: usize = 30;
+            for i in 0..ITERS {
+                let d = (i as f32).sqrt() * 1.0;
+                let a = PHI * TAU * i as f32;
+
+                let offs_x = (f32::sin(a) * d);
+                let offs_y = (f32::cos(a) * d);
+
+                let dir = (shoot_pos - player_eye_pos)
+                    .normalized()
+                    .rotate(1, offs_x)
+                    .rotate(0, offs_y);
+
+                let (damage, hit_group, lethal) = Self::simulate_shot(
+                    player_eye_pos,
+                    dir,
+                    TraceFilterGeneric::new(local_player.as_ptr()),
+                    weapon_data,
+                    closest,
                 );
 
-                let mut velocity = local_player.velocity() * -1.0;
+                if (damage > 0.0) {
+                    debug!(
+                        "Iter: {i} Damage: {damage}, hitgroup: {hit_group:?}, is lethal: {lethal}"
+                    );
+                }
 
-                velocity.z = 0.0;
+                if (damage > aimbot_settings.min_damage || lethal)
+                    && local_player.weapon().unwrap().next_attack()
+                        < interfaces.global_vars.cur_time
+                {
+                    debug!("shot at iter {i}");
 
-                let speed = velocity.mag_sqrt();
-                let yaw =
-                    (cmd.view_angles.y - velocity.y.atan2(velocity.x).to_degrees()).to_radians();
-                if speed > weapon_data.max_speed / 3.0 {
-                    cmd.forward_move = yaw.cos() * speed - yaw.sin() * speed;
-                    cmd.side_move = yaw.sin() * speed + yaw.cos() * speed;
-                } else {
-                    cmd.buttons |= EButtons::ATTACK;
+                    let (yaw, pitch) = Aimbot::calculate_angle_to_entity(shoot_pos, player_eye_pos);
+                    let yaw = yaw + offs_x;
+                    let pitch = pitch + offs_y;
+
+                    let punch = local_player.aim_punch();
+                    cmd.view_angles.x = pitch - punch.x * 2.0;
+                    cmd.view_angles.y = yaw - punch.y * 2.0;
+
+                    let mut velocity = local_player.velocity() * -1.0;
+
+                    velocity.z = 0.0;
+
+                    let speed = velocity.mag_sqrt();
+                    let yaw = (cmd.view_angles.y - velocity.y.atan2(velocity.x).to_degrees())
+                        .to_radians();
+                    if speed > weapon_data.max_speed / 3.0 {
+                        cmd.forward_move = yaw.cos() * speed - yaw.sin() * speed;
+                        cmd.side_move = yaw.sin() * speed + yaw.cos() * speed;
+                    } else {
+                        cmd.buttons |= EButtons::ATTACK;
+                    }
+                    break;
                 }
             }
         }
@@ -173,17 +195,15 @@ impl Aimbot {
         damage
     }
 
-    fn handle_wall(
-        local_player: &CEntity,
-        target_eye_pos: Vec3,
+    fn simulate_shot(
+        mut start: Vec3,
+        mut direction: Vec3,
+        mut filter: TraceFilterGeneric,
         weapon_data: &WeaponInfo,
         target: &CEntity,
     ) -> (f32, HitGroup, bool) {
         let interfaces = INTERFACES.get().unwrap();
-        let mut start = unsafe { zeroed::<Vec3>() };
-        local_player.eye_pos(&mut start);
 
-        let mut direction = (target_eye_pos - start).normalized();
         // Get weapon data
         let mut damage = weapon_data.damage as f32;
 
@@ -200,7 +220,6 @@ impl Aimbot {
             // Setup the ray and trace
             let ray = Ray::new(start, end);
             let mut trace = unsafe { zeroed::<Trace>() };
-            let mut filter = TraceFilterGeneric::new(local_player.as_ptr());
             interfaces.trace.trace_ray_virtual(
                 &ray,
                 0x4600400B,

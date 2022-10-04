@@ -54,7 +54,6 @@ impl ThirdPerson {
             return;
         }
         let view = unsafe { &mut *event.setup };
-        dbg!(interfaces.input);
         let mut input = unsafe { &mut *interfaces.input };
         let local_player = interfaces
             .entity_list
