@@ -161,9 +161,9 @@ pub struct Trace {
     pub surface: CSurface,
     pub hit_group: i32,
     pub physics_bone: c_short,
-    pub worldSurfaceIndex: u16,
+    pub world_surface_index: u16,
     pub ptr_entity: *const CEntity,
-    pub hitbox: i32,
+    pub hit_box: i32,
 }
 
 #[repr(C)]

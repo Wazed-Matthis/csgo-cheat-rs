@@ -25,14 +25,14 @@ pub struct Color {
 #[derive(Clone, Copy)]
 pub struct Vertex {
     pub position: Vec2,
-    pub texCoord: Vec2,
+    pub tex_coord: Vec2,
 }
 
 impl Vertex {
     pub fn pos(position: Vec2) -> Self {
         Vertex {
             position,
-            texCoord: Vec2 { x: 0.0, y: 0.0 },
+            tex_coord: Vec2 { x: 0.0, y: 0.0 },
         }
     }
 }

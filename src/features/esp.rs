@@ -15,11 +15,16 @@ feature!(ESP => ESP::paint_traverse);
 impl ESP {
     pub fn paint_traverse(_: &mut EventPaintTraverse) {
         let interfaces = INTERFACES.get().unwrap();
-        let local_player = interfaces
+        let option = interfaces
             .entity_list
             .entity(interfaces.engine.local_player())
-            .get()
-            .unwrap();
+            .get();
+        
+        let local_player = if let Some(ent) = option {
+            ent
+        } else {
+            return;
+        };
 
         for i in 0..interfaces.global_vars.max_clients {
             let entity = interfaces.entity_list.entity(i);
@@ -34,8 +39,8 @@ impl ESP {
                     let collidable = ent.collidable();
                     if let Some(col) = collidable.get() {
                         let origin = ent.abs_origin();
-                        let mins = col.min().clone();
-                        let maxs = col.max().clone();
+                        let mins = *col.min();
+                        let maxs = *col.max();
                         // Define all bounding box edges
                         #[rustfmt::skip]
                         let points = vec![
@@ -53,8 +58,8 @@ impl ESP {
                         let screen_points: Vec<Vec3> = points
                             .iter()
                             .map(|point| {
-                                let mut contextualized = point.clone() + origin.clone();
-                                let mut projected = contextualized.clone();
+                                let mut contextualized = *point + *origin;
+                                let mut projected = contextualized;
                                 interfaces
                                     .debug_overlay
                                     .world_to_screen(&mut contextualized, &mut projected);
@@ -212,7 +217,7 @@ impl ESP {
             .get()
             .unwrap();
         let mut target_pos = entity.origin();
-        let mut screen_pos = target_pos.clone();
+        let mut screen_pos = target_pos;
         interfaces
             .debug_overlay
             .world_to_screen(&mut target_pos, &mut screen_pos);
@@ -281,7 +286,7 @@ impl ESP {
             y: 0f32,
             z: 1f32,
         };
-        let mut fwd = math::forward_angle_vectors(view_angles);
+        let mut fwd = math::heading(view_angles);
         fwd.z = 0f32;
         fwd = fwd.normalized();
         let right = up.crossed(fwd);
@@ -323,8 +328,8 @@ impl ESP {
                             }
                             let mut bone_pos = first_bones[i as usize].origin();
                             let mut parent_bone_pos = first_bones[parent as usize].origin();
-                            let mut bone_screen = bone_pos.clone();
-                            let mut parent_bone_screen = parent_bone_pos.clone();
+                            let mut bone_screen = bone_pos;
+                            let mut parent_bone_screen = parent_bone_pos;
                             interfaces
                                 .debug_overlay
                                 .world_to_screen(&mut bone_pos, &mut bone_screen);

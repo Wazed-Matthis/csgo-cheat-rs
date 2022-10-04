@@ -2,6 +2,7 @@
 
 extern crate core;
 
+use encryption_macros::encrypt_strings;
 use std::any::Any;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_float, c_void, CStr};
@@ -56,7 +57,6 @@ pub mod sdk;
 
 static INTERFACES: OnceCell<Interfaces> = OnceCell::new();
 static MAIN_BUS: OnceCell<EventBus> = OnceCell::new();
-
 static CONFIG: OnceCell<Configuration> = OnceCell::new();
 
 /// # Safety
@@ -103,17 +103,14 @@ register_features!(
 pub fn initialize() {
     INTERFACES.set(Interfaces::init()).unwrap();
     let mut config_string = String::new();
-    File::open("C:/Users/Lenno/IdeaProjects/csgo-cheat-rs/config.json")
+    File::open("C:/Users/matth/CLionProjects/csgo-cheat-rs/config.json")
         .unwrap()
         .read_to_string(&mut config_string)
         .unwrap();
     let config =
         serde_json::from_str::<Configuration>(&config_string).expect("Failed to parse config_file");
     CONFIG.set(config).unwrap();
-    let is_err = MAIN_BUS.set(EventBus::new("main")).is_err();
-    if is_err {
-        error!("Failed to initialize main event bus");
-    }
+    let _ = MAIN_BUS.set(EventBus::new("main"));
 
     sdk::structs::weapon::init_weapon_map();
     init_features();
@@ -164,8 +161,7 @@ pub extern "fastcall" fn create_move(
     }
 
     let a = unsafe { &mut *user_cmd };
-    let old_view_angle = a.view_angles.clone();
-
+    let old_view_angle = a.view_angles;
     dispatch_event("main", &mut EventCreateMove { user_cmd });
     let mut guard = features::third_person::ANGLES.write().unwrap();
     guard.x = a.view_angles.x;

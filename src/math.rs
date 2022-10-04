@@ -3,11 +3,14 @@ use crate::sdk::surface::Vertex;
 use crate::Vec3;
 
 /// Converts view angles to a forward vector
-pub fn forward_angle_vectors(angles: Vec3) -> Vec3 {
-    let cp = angles.x.to_radians().cos();
-    let sp = angles.x.to_radians().sin();
-    let cy = angles.y.to_radians().cos();
-    let sy = angles.y.to_radians().sin();
+pub fn heading(angles: Vec3) -> Vec3 {
+    let x_rad = angles.x.to_radians();
+    let y_rad = angles.y.to_radians();
+
+    let cp = x_rad.cos();
+    let sp = x_rad.sin();
+    let cy = y_rad.cos();
+    let sy = y_rad.sin();
     Vec3 {
         x: cp * cy,
         y: cp * sy,

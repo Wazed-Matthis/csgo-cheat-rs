@@ -5,7 +5,7 @@
   "features": {
     "Aimbot": {
       "fov": 360,
-      "min_damage": 102
+      "min_damage": 100
     },
     "ESP": {},
     "Watermark": {},

@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, c_void, CStr, CString};
+use std::ffi::{c_char, c_int, c_void, CString};
 use std::mem::transmute;
 use std::ptr::null_mut;
 
@@ -9,7 +9,7 @@ use winapi::um::libloaderapi::{GetModuleHandleA, GetProcAddress};
 
 use crate::sdk::debug_overlay::DebugOverlay;
 use crate::sdk::engine_prediction::Prediction;
-use crate::sdk::input::{CInput, Input};
+use crate::sdk::input::CInput;
 use crate::sdk::localize::Localize;
 use crate::sdk::panel::Panel;
 use crate::sdk::structs::model::ModelInfo;
@@ -24,7 +24,7 @@ const ENTITY_LIST: &str = "VClientEntityList003";
 const ENGINE: &str = "VEngineClient014";
 const VGUI_PANEL: &str = "VGUI_Panel009";
 const VGUI_SURFACE: &str = "VGUI_Surface031";
-const INPUT_SYSTEM: &str = "InputSystemVersion001";
+const _INPUT_SYSTEM: &str = "InputSystemVersion001";
 const _RENDER_VIEW: &str = "VEngineRenderView014";
 const _CVAR: &str = "VEngineCvar007";
 const ENGINE_TRACE: &str = "EngineTraceClient004";
@@ -65,6 +65,7 @@ impl Interfaces {
         unsafe {
             let client_interface = get_interface::<Client>("client.dll", CLIENT);
 
+            let client_module_c_str = CString::new("client.dll").unwrap();
             Self {
                 client_mode: **(((*((*(client_interface.as_ptr() as *mut *mut usize)).offset(10)))
                     + 5) as *mut *mut _),
@@ -85,7 +86,7 @@ impl Interfaces {
                 input: std::ptr::read::<*mut CInput>(
                     (crate::memory::scan_for_signature(
                         &Signature::from("B9 ?? ?? ?? ?? 8B 40 38 FF D0 84 C0 0F 85".to_owned()),
-                        CString::new("client.dll").unwrap().as_ptr(),
+                        client_module_c_str.as_ptr(),
                     )
                     .unwrap() as usize
                         + 0x1) as *const *mut CInput,
@@ -93,7 +94,7 @@ impl Interfaces {
                 view_render: std::ptr::read::<*mut ViewRender>(
                     (crate::memory::scan_for_signature(
                         &Signature::from("8B 0D ?? ?? ?? ?? FF 75 0C 8B 45 08".to_owned()),
-                        CString::new("client.dll").unwrap().as_ptr(),
+                        client_module_c_str.as_ptr(),
                     )
                     .unwrap() as usize
                         + 2) as *const *mut ViewRender,

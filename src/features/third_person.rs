@@ -1,8 +1,11 @@
 use std::mem;
 use std::sync::RwLock;
 
+use crate::math::heading;
 use crate::sdk::classes::Stage;
-use crate::{feature, EventFrameStageNotify, EventOverrideView, Vec3, INTERFACES};
+use crate::sdk::trace::{Ray, TraceFilterGeneric, TraceFilterTrait, CONTENTS_GRATE, MASK_SHOT};
+use crate::{feature, math, EventFrameStageNotify, EventOverrideView, Vec3, INTERFACES};
+use vtables::VTable;
 
 pub static ANGLES: RwLock<Vec3> = RwLock::new(Vec3 {
     x: 0.0,
@@ -28,11 +31,11 @@ impl ThirdPerson {
                     if !local.is_alive() {
                         return;
                     }
-                    let mut angles = ANGLES.read().unwrap().clone();
+
+                    let angles = ANGLES.read().unwrap().clone();
                     let dead_flag = crate::netvar::offset("DT_BasePlayer", "deadflag");
 
-                    let angle_ptr = ((local.vtable as usize + dead_flag + 0x4) as *mut Vec3);
-                    dbg!(angle_ptr);
+                    let angle_ptr = (local.vtable as usize + dead_flag + 0x4) as *mut Vec3;
                     if angle_ptr.is_null() {
                         return;
                     }
@@ -65,16 +68,40 @@ impl ThirdPerson {
                 if !local.is_alive() {
                     return;
                 }
-                input.m_camera_in_third_person = true;
-                view.fov = 120.0;
-                view.fov_viewmodel = 120.0;
                 let mut view_angles = unsafe { mem::zeroed() };
                 interfaces.engine.get_view_angles(&mut view_angles);
-                view_angles.z = 100.0;
 
-                view.aspect_ratio = 0.5;
-                input.m_camera_moving_with_mouse = false;
+                let mut start = unsafe { mem::zeroed() };
+                local.eye_pos(&mut start);
+
+                let yaw = view_angles.y.to_radians();
+                let pitch = view_angles.x.to_radians();
+
+                let direction = Vec3 {
+                    x: yaw.cos() * pitch.cos(),
+                    y: yaw.sin() * pitch.cos(),
+                    z: -pitch.sin(),
+                };
+
+                let ray = Ray::new(start, start - direction * 150.0);
+                let mut trace = unsafe { mem::zeroed() };
+                let mut filter = TraceFilterGeneric::new(local.as_ptr());
+                interfaces.trace.trace_ray_virtual(
+                    &ray,
+                    (MASK_SHOT | CONTENTS_GRATE) as u32,
+                    &mut filter as *mut TraceFilterGeneric as _,
+                    &mut trace,
+                );
+
+                let dist = 150.0 * trace.fraction.min(1.0) * 0.8;
+
+                view_angles.z = dist;
+                input.m_camera_in_third_person = true;
                 input.m_camera_offset = view_angles;
+
+                view.fov = 120.0;
+                view.fov_viewmodel = 120.0;
+                view.aspect_ratio = 0.5;
             }
         }
     }

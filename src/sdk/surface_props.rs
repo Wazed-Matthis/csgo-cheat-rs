@@ -7,9 +7,9 @@ pub struct SurfaceData {
     pad: [c_char; 80],
     max_speed_factor: f32,
     jump_factor: f32,
-    pub(crate) penetration_modifier: f32,
+    pub penetration_modifier: f32,
     damage_modifier: f32,
-    pub(crate) material: c_short,
+    pub material: c_short,
     climbable: bool,
 }
 

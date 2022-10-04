@@ -1,28 +1,22 @@
 use std::cmp::Ordering;
-use std::ffi::CStr;
 use std::mem;
 use std::mem::zeroed;
-use std::process::exit;
 use std::ptr::null_mut;
 
 use log::debug;
 use vtables::VTable;
-use winapi::um::winbase::BuildCommDCBAndTimeoutsA;
-use winapi::um::winnt::INT;
 
-use crate::sdk::classes::{EButtons, Matrix3x4, Matrix4x3};
+use crate::sdk::classes::EButtons;
 use crate::sdk::structs::entities::CEntity;
-use crate::sdk::structs::weapon::{Weapon, WeaponInfo};
-use crate::sdk::surface::Surface;
+use crate::sdk::structs::weapon::WeaponInfo;
 use crate::sdk::surface_props::SurfaceData;
-use crate::sdk::trace::hit_group::HitGroup::Invalid;
-use crate::sdk::trace::hit_group::{get_damage_multiplier, HitGroup};
+use crate::sdk::trace::hit_group::HitGroup;
 use crate::sdk::trace::{
-    CSurface, Ray, Trace, TraceFilterGeneric, TraceFilterTrait, CHAR_TEX_CARDBOARD, CHAR_TEX_GLASS,
+    Ray, Trace, TraceFilterGeneric, TraceFilterTrait, CHAR_TEX_CARDBOARD, CHAR_TEX_GLASS,
     CHAR_TEX_GRATE, CHAR_TEX_PLASTIC, CHAR_TEX_WOOD, CONTENTS_GRATE, CONTENTS_HITBOX, MASK_SHOT,
     MASK_SHOT_HULL, SURF_HITBOX, SURF_NODRAW,
 };
-use crate::{feature, EventCreateMove, FeatureSettings, Vec3, CONFIG, INTERFACES};
+use crate::{feature, EventCreateMove, Vec3, CONFIG, INTERFACES};
 
 feature!(Aimbot => Aimbot::create_move);
 
@@ -46,9 +40,9 @@ impl Aimbot {
         let mut possible_targets = (0..interfaces.global_vars.max_clients)
             .flat_map(|i| {
                 let entity = interfaces.entity_list.entity(i);
-                (entity.get())
+                entity.get()
             })
-            .filter(|(entity)| {
+            .filter(|entity| {
                 entity.is_player()
                     && entity.is_alive()
                     && entity.as_ptr() != local_player.as_ptr()
@@ -61,13 +55,13 @@ impl Aimbot {
         interfaces.engine.get_view_angles(&mut view_angles);
 
         possible_targets.sort_by(|entity, entity1| {
-            let mut first_bones = unsafe { mem::zeroed() };
+            let mut first_bones = unsafe { zeroed() };
             unsafe {
                 entity.setup(&mut first_bones, 255, 255, 0.0);
             }
             let first_head_bone = first_bones[8].origin();
 
-            let mut second_bones = unsafe { mem::zeroed() };
+            let mut second_bones = unsafe { zeroed() };
             unsafe {
                 entity1.setup(&mut second_bones, 255, 255, 0.0);
             }
@@ -108,30 +102,30 @@ impl Aimbot {
         };
 
         if let Some(closest) = closest_target {
-            let mut mat = unsafe { mem::zeroed() };
+            let mut mat = unsafe { zeroed() };
             unsafe {
-                let a = closest.setup(&mut mat, 255, 255, 0.0);
+                closest.setup(&mut mat, 255, 255, 0.0);
             }
             let closest_eye_pos = mat[8].origin();
 
-            let (damage, hitgroup, lethal) =
-                Self::handle_wall(&local_player, closest_eye_pos, weapon_data, closest, 0);
+            let (damage, hit_group, lethal) =
+                Self::handle_wall(&local_player, closest_eye_pos, weapon_data, closest);
 
             let guard = CONFIG.get().unwrap();
-            let aimbot_settings = guard.features.Aimbot.clone();
+            let aimbot_settings = &guard.features.Aimbot;
 
-            if damage > aimbot_settings.min_damage
-                || lethal
-                    && local_player.weapon().unwrap().next_attack() + 0.2
-                        < interfaces.global_vars.cur_time
+            if (damage > aimbot_settings.min_damage || lethal)
+                && local_player.weapon().unwrap().next_attack() < interfaces.global_vars.cur_time
             {
                 let (yaw, pitch) =
                     Aimbot::calculate_angle_to_entity(closest_eye_pos, local_eye_pos);
-                cmd.view_angles.x = pitch;
-                cmd.view_angles.y = yaw;
+                let punch = local_player.aim_punch();
+                cmd.view_angles.x = pitch - punch.x * 2.0;
+                cmd.view_angles.y = yaw - punch.y * 2.0;
+
                 debug!(
                     "Damage: {}, hitgroup: {:?}, is lethal: {}",
-                    damage, hitgroup, lethal
+                    damage, hit_group, lethal
                 );
 
                 let mut velocity = local_player.velocity() * -1.0;
@@ -141,13 +135,12 @@ impl Aimbot {
                 let speed = velocity.mag_sqrt();
                 let yaw =
                     (cmd.view_angles.y - velocity.y.atan2(velocity.x).to_degrees()).to_radians();
-
-                cmd.forward_move = yaw.cos() * speed - yaw.sin() * speed;
-                cmd.side_move = yaw.sin() * speed + yaw.cos() * speed;
-
-                // if speed < weapon_data.max_speed / 5.0 {
-                cmd.buttons |= EButtons::ATTACK;
-                // }
+                if speed > weapon_data.max_speed / 3.0 {
+                    cmd.forward_move = yaw.cos() * speed - yaw.sin() * speed;
+                    cmd.side_move = yaw.sin() * speed + yaw.cos() * speed;
+                } else {
+                    cmd.buttons |= EButtons::ATTACK;
+                }
             }
         }
     }
@@ -160,7 +153,7 @@ impl Aimbot {
         )
     }
     fn scale_damage(target: &CEntity, hit_group: i32, hs_multiplier: f32, armor_ratio: f32) -> f32 {
-        let group = HitGroup::try_from(hit_group).unwrap_or(Invalid);
+        let group = HitGroup::try_from(hit_group).unwrap_or(HitGroup::Invalid);
         let mut damage = match group {
             HitGroup::Head => hs_multiplier,
             HitGroup::Stomach => 1.25,
@@ -170,10 +163,6 @@ impl Aimbot {
 
         let armor = target.armor();
         if armor > 0 || (group == HitGroup::Head && target.has_helmet()) {
-            let heavy_ratio = 1f32;
-            let bonus_ratio = 0.5f32;
-            let ratio = armor_ratio * 0.05;
-
             damage -= if (armor as f32) < damage * armor_ratio {
                 armor as f32 * 4.0
             } else {
@@ -189,7 +178,6 @@ impl Aimbot {
         target_eye_pos: Vec3,
         weapon_data: &WeaponInfo,
         target: &CEntity,
-        target_index: i32,
     ) -> (f32, HitGroup, bool) {
         let interfaces = INTERFACES.get().unwrap();
         let mut start = unsafe { zeroed::<Vec3>() };
@@ -198,7 +186,6 @@ impl Aimbot {
         let mut direction = (target_eye_pos - start).normalized();
         // Get weapon data
         let mut damage = weapon_data.damage as f32;
-        let mut penetration = weapon_data.penetration;
 
         let mut distance = 0.0;
         let mut pen = 4;
@@ -359,13 +346,13 @@ impl Aimbot {
             .surface_props
             .surface_data(exit_trace.surface.surface_props as i32);
 
-        let exit_surface_data = unsafe { *exit_surface_data };
+        let exit_surface_data = *exit_surface_data;
         let mut damage_modifier = 0.16f32;
-        let mut penetration_modifier = 0.0;
+        let mut penetration_modifier;
 
         // used later in calculations.
         let penetration_mod = 0.0f32.max((3.0 / penetration) * 1.25);
-        let nodraw = enter_trace.surface.flags & SURF_NODRAW;
+        let no_draw = enter_trace.surface.flags & SURF_NODRAW;
         let grate = enter_trace.contents & CONTENTS_GRATE;
 
         if enter_surface_data.material as u8 as char == CHAR_TEX_GRATE
@@ -373,7 +360,7 @@ impl Aimbot {
         {
             penetration_modifier = 3.0;
             damage_modifier = 0.05;
-        } else if nodraw != 0 || grate != 0 {
+        } else if no_draw != 0 || grate != 0 {
             penetration_modifier = 1.0;
         } else {
             penetration_modifier = (enter_surface_data.penetration_modifier
