@@ -1,11 +1,13 @@
-use crate::font::FontType::{Items, Outline, OutlineBold, Shadow, ShadowBold, Small};
+use crate::font::FontType::{Items, OutlineBold, Shadow, ShadowBold, Small};
 use crate::sdk::classes::Vec2;
 use crate::sdk::structs::entities::CEntity;
 use crate::sdk::surface::Vertex;
-use crate::{feature, font, math, sdk, Color, EventPaintTraverse, Vec3, INTERFACES, WEAPON_MAP};
+use crate::{
+    feature, font, math, Color, EventPaintTraverse, Vec3, WeaponType, INTERFACES, WEAPON_MAP,
+};
 use color_space::{Hsv, Rgb};
 use std::f32::consts::PI;
-use std::ffi::{CStr, OsStr};
+use std::ffi::CStr;
 use std::mem;
 use std::mem::zeroed;
 use widestring::WideCString;
@@ -193,9 +195,13 @@ impl ESP {
                             let weapon_map = WEAPON_MAP
                                 .get()
                                 .expect("Could not get weapon map for Item Rendering");
-                            if let Some(weapon_id) = weapon_map.get(&(weapon.get_id() as i32)) {
+                            if let Ok(Some(&weapon_str)) = weapon
+                                .get_id()
+                                .try_into()
+                                .map(|ty: WeaponType| weapon_map.get(&ty))
+                            {
                                 font::text_center(
-                                    weapon_id,
+                                    weapon_str,
                                     x + ((x1 - x) / 2.0),
                                     y1 + text_bounds.1 as f32 - 4f32,
                                     Items,

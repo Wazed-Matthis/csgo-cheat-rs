@@ -1,20 +1,16 @@
-use std::cmp::max;
 use std::ffi::{c_int, c_void};
-use std::mem;
-use std::mem::size_of;
 use std::ptr::null;
 
-use log::{debug, error};
 use vtables::VTable;
 use vtables_derive::{has_vtable, virtual_index, VTable};
 
 use crate::get_interfaces;
 use crate::memory::NotNull;
-use crate::sdk::classes::{Matrix3x4, Matrix4x3, Vec2, Vec3};
+use crate::netvar;
+use crate::sdk::classes::{Matrix4x3, Vec2, Vec3};
 use crate::sdk::structs::collidable::Collidable;
 use crate::sdk::structs::model::Model;
 use crate::sdk::structs::weapon::Weapon;
-use crate::{netvar, Client};
 
 type OriginalBoneSetupFn =
     unsafe extern "thiscall" fn(*mut c_void, *mut Matrix4x3, i32, i32, f32) -> bool;
@@ -116,7 +112,6 @@ impl CEntity {
     }
 
     /// # Safety
-    /// this crashes :shrug:
     pub unsafe fn setup(
         &self,
         out: &mut [Matrix4x3; 256],

@@ -1,5 +1,4 @@
 use crate::Vec3;
-use log::{debug, error};
 use std::ffi::{c_char, c_void};
 use vtables::VTable;
 use vtables_derive::{has_vtable, virtual_index, VTable};

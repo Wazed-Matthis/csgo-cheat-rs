@@ -15,7 +15,7 @@ impl EntityList {
     pub fn entity_from_handle<T: VTable>(&self, handle: i32) -> Option<T> {
         self.get_entity_from_handle_virtual(handle)
             .get()
-            .map(|entity| unsafe { T::new(entity.as_ptr() as _) })
+            .map(|entity| T::new(entity.as_ptr() as _))
     }
 
     #[virtual_index(4)]

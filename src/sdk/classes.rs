@@ -1,5 +1,4 @@
-use std::f32::EPSILON;
-use std::ops::{Add, Div, DivAssign, Index, Mul, Sub};
+use std::ops::{Add, Div, Mul, Sub};
 
 use bitflags::bitflags;
 use winapi::ctypes::c_char;
