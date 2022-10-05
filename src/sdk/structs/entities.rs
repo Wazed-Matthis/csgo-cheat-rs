@@ -17,8 +17,12 @@ type OriginalBoneSetupFn =
 type OriginalModelFn = unsafe extern "thiscall" fn(*mut c_void) -> *const Model;
 
 #[has_vtable]
-#[derive(VTable, Debug)]
+#[derive(VTable, Debug, Clone)]
 pub struct CEntity {}
+
+unsafe impl Sync for CEntity {}
+
+unsafe impl Send for CEntity {}
 
 impl CEntity {
     // #[virtual_index(122)]

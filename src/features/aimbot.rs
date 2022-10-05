@@ -2,8 +2,10 @@ use std::cmp::Ordering;
 use std::mem;
 use std::mem::zeroed;
 use std::ptr::null_mut;
+use std::sync::{Arc, Mutex, RwLock};
 
 use log::{debug, error};
+use once_cell::sync::OnceCell;
 use vtables::VTable;
 
 use crate::sdk::classes::EButtons;
@@ -17,6 +19,8 @@ use crate::sdk::trace::{
     MASK_SHOT_HULL, SURF_HITBOX, SURF_NODRAW,
 };
 use crate::{feature, EventCreateMove, Vec3, CONFIG, INTERFACES};
+
+pub(crate) static TARGET: OnceCell<RwLock<Option<CEntity>>> = OnceCell::new();
 
 feature!(Aimbot => Aimbot::create_move);
 
@@ -34,10 +38,7 @@ impl Aimbot {
         local_player.eye_pos(&mut player_eye_pos);
 
         let weapon_data = match local_player.weapon() {
-            None => {
-                error!("bruh");
-                return;
-            }
+            None => return,
             Some(weapon) => weapon.get_weapon_data(),
         };
 
@@ -113,6 +114,9 @@ impl Aimbot {
         let closest_target = possible_targets.first();
 
         if let Some(closest) = closest_target {
+            let mut target_guard = TARGET.get().unwrap().write().unwrap();
+            *target_guard = Some(closest.clone());
+
             let guard = CONFIG.get().unwrap();
             let aimbot_settings = &guard.features.Aimbot;
 
@@ -127,7 +131,7 @@ impl Aimbot {
             const TAU: f32 = std::f32::consts::TAU;
             const ITERS: usize = 30;
             for i in 0..ITERS {
-                let d = (i as f32).sqrt() * 1.0;
+                let d = (i as f32).sqrt() * 0.5;
                 let a = PHI * TAU * i as f32;
 
                 let offs_x = (f32::sin(a) * d);

@@ -9,7 +9,7 @@ use std::ffi::{c_char, c_float, c_void, CStr};
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use std::{fs, mem, panic, ptr, thread};
 
@@ -30,7 +30,7 @@ use crate::config::Configuration;
 use crate::events::{
     EventCreateMove, EventFrameStageNotify, EventOverrideView, EventPaintTraverse,
 };
-use crate::features::aimbot::Aimbot;
+use crate::features::aimbot::{Aimbot, TARGET};
 use crate::features::anti_aim::AntiAim;
 use crate::features::esp::ESP;
 use crate::features::watermark::Watermark;
@@ -54,6 +54,7 @@ pub mod math;
 pub mod memory;
 pub mod netvar;
 pub mod sdk;
+pub mod util;
 
 static INTERFACES: OnceCell<Interfaces> = OnceCell::new();
 static MAIN_BUS: OnceCell<EventBus> = OnceCell::new();
@@ -110,6 +111,7 @@ pub fn initialize() {
     let config =
         serde_json::from_str::<Configuration>(&config_string).expect("Failed to parse config_file");
     CONFIG.set(config).unwrap();
+    let _ = TARGET.set(RwLock::new(None));
     let _ = MAIN_BUS.set(EventBus::new("main"));
 
     sdk::structs::weapon::init_weapon_map();
