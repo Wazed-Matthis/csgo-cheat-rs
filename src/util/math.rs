@@ -18,6 +18,14 @@ pub fn heading(angles: Vec3) -> Vec3 {
     }
 }
 
+pub fn calculate_angle_to_entity(entity: Vec3, local_origin: Vec3) -> (f32, f32) {
+    let delta = entity - local_origin;
+    (
+        delta.y.atan2(delta.x).to_degrees(),
+        (-delta.z).atan2(delta.x.hypot(delta.y)).to_degrees(),
+    )
+}
+
 pub fn rotate_vertex(origin: Vec2, vertex: Vertex, angle: f32) -> Vertex {
     let c = angle.to_radians().cos();
     let s = angle.to_radians().sin();

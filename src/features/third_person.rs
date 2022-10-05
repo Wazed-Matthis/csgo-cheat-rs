@@ -1,10 +1,11 @@
 use std::mem;
 use std::sync::RwLock;
 
-use crate::math::heading;
 use crate::sdk::classes::Stage;
 use crate::sdk::trace::{Ray, TraceFilterGeneric, TraceFilterTrait, CONTENTS_GRATE, MASK_SHOT};
-use crate::{feature, math, EventFrameStageNotify, EventOverrideView, Vec3, INTERFACES};
+use crate::util::math;
+use crate::util::math::heading;
+use crate::{feature, EventFrameStageNotify, EventOverrideView, Vec3, INTERFACES};
 use vtables::VTable;
 
 pub static ANGLES: RwLock<Vec3> = RwLock::new(Vec3 {
@@ -92,15 +93,15 @@ impl ThirdPerson {
                     &mut trace,
                 );
 
-                let dist = 150.0 * trace.fraction.min(1.0) * 0.8;
+                let dist = 100.0 * trace.fraction.min(1.0) * 0.8;
 
                 view_angles.z = dist;
                 input.m_camera_in_third_person = true;
                 input.m_camera_offset = view_angles;
 
-                view.fov = 120.0;
-                view.fov_viewmodel = 120.0;
-                view.aspect_ratio = 0.5;
+                // view.fov = 120.0;
+                // view.fov_viewmodel = 120.0;
+                view.aspect_ratio = 0.25;
             }
         }
     }

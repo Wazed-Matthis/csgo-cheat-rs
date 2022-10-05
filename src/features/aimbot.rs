@@ -18,7 +18,8 @@ use crate::sdk::trace::{
     CHAR_TEX_GRATE, CHAR_TEX_PLASTIC, CHAR_TEX_WOOD, CONTENTS_GRATE, CONTENTS_HITBOX, MASK_SHOT,
     MASK_SHOT_HULL, SURF_HITBOX, SURF_NODRAW,
 };
-use crate::{feature, EventCreateMove, Vec3, CONFIG, INTERFACES};
+use crate::util::math;
+use crate::{feature, util, EventCreateMove, Vec3, CONFIG, INTERFACES};
 
 pub(crate) static TARGET: OnceCell<RwLock<Option<CEntity>>> = OnceCell::new();
 
@@ -42,76 +43,26 @@ impl Aimbot {
             Some(weapon) => weapon.get_weapon_data(),
         };
 
-        let mut possible_targets = (0..interfaces.global_vars.max_clients)
-            .filter_map(|i| interfaces.entity_list.entity(i).get())
-            .filter(|entity| {
-                let mut bone_matrices = unsafe { zeroed() };
-
-                unsafe {
-                    entity.setup_bones(&mut bone_matrices, 255, 255, 0.0);
-                }
-                let entity_bone_pos = bone_matrices[8].origin();
-                let result = Self::simulate_shot(
-                    player_eye_pos,
-                    (entity_bone_pos - player_eye_pos).normalized(),
-                    TraceFilterGeneric::new(local_player.as_ptr()),
-                    weapon_data,
-                    entity,
-                );
-
-                entity.is_player()
-                    && entity.is_alive()
-                    && entity.as_ptr() != local_player.as_ptr()
-                    && entity.team() != local_player.team()
-                    && result.0 > 0.0
-            })
-            .collect::<Vec<CEntity>>();
-
         let mut view_angles = unsafe { zeroed::<Vec3>() };
-
         interfaces.engine.get_view_angles(&mut view_angles);
 
-        possible_targets.sort_by(|entity, entity1| {
-            let mut first_bones = unsafe { zeroed() };
+        let closest_target = util::entity_util::closest_target(|entity| {
+            let mut bone_matrices = unsafe { zeroed() };
+
             unsafe {
-                entity.setup_bones(&mut first_bones, 255, 255, 0.0);
+                entity.setup_bones(&mut bone_matrices, 255, 255, 0.0);
             }
-            let first_head_bone = first_bones[8].origin();
-
-            let mut second_bones = unsafe { zeroed() };
-            unsafe {
-                entity1.setup_bones(&mut second_bones, 255, 255, 0.0);
-            }
-            let second_head_bone = second_bones[8].origin();
-
-            let (first_yaw, first_pitch) =
-                Aimbot::calculate_angle_to_entity(first_head_bone, player_eye_pos);
-            let (second_yaw, second_pitch) =
-                Aimbot::calculate_angle_to_entity(second_head_bone, player_eye_pos);
-
-            let current_yaw = view_angles.y;
-            let current_pitch = view_angles.x;
-            let (first_diff_yaw, first_diff_pitch) = (
-                (first_yaw - current_yaw).abs(),
-                (first_pitch - current_pitch).abs(),
+            let entity_bone_pos = bone_matrices[8].origin();
+            let result = Self::simulate_shot(
+                player_eye_pos,
+                (entity_bone_pos - player_eye_pos).normalized(),
+                TraceFilterGeneric::new(local_player.as_ptr()),
+                weapon_data,
+                entity,
             );
 
-            let (second_diff_yaw, second_diff_pitch) = (
-                (second_yaw - current_yaw).abs(),
-                (second_pitch - current_pitch).abs(),
-            );
-
-            let first_diff = first_diff_yaw.hypot(first_diff_pitch);
-            let second_diff = second_diff_yaw.hypot(second_diff_pitch);
-
-            if first_diff < second_diff {
-                Ordering::Less
-            } else {
-                Ordering::Greater
-            }
+            result.0 > 0.0
         });
-
-        let closest_target = possible_targets.first();
 
         if let Some(closest) = closest_target {
             let mut target_guard = TARGET.get().unwrap().write().unwrap();
@@ -147,7 +98,7 @@ impl Aimbot {
                     dir,
                     TraceFilterGeneric::new(local_player.as_ptr()),
                     weapon_data,
-                    closest,
+                    &closest,
                 );
 
                 if damage > 0.0 {
@@ -162,7 +113,7 @@ impl Aimbot {
                 {
                     debug!("shot at iter {i}");
 
-                    let (yaw, pitch) = Aimbot::calculate_angle_to_entity(shoot_pos, player_eye_pos);
+                    let (yaw, pitch) = math::calculate_angle_to_entity(shoot_pos, player_eye_pos);
                     let yaw = yaw + offs_x;
                     let pitch = pitch + offs_y;
 
@@ -189,13 +140,6 @@ impl Aimbot {
         }
     }
 
-    fn calculate_angle_to_entity(entity: Vec3, local_origin: Vec3) -> (f32, f32) {
-        let delta = entity - local_origin;
-        (
-            delta.y.atan2(delta.x).to_degrees(),
-            (-delta.z).atan2(delta.x.hypot(delta.y)).to_degrees(),
-        )
-    }
     fn scale_damage(target: &CEntity, hit_group: i32, hs_multiplier: f32, armor_ratio: f32) -> f32 {
         let group = HitGroup::try_from(hit_group).unwrap_or(HitGroup::Invalid);
         let mut damage = match group {

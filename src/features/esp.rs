@@ -2,9 +2,8 @@ use crate::font::FontType::{Items, OutlineBold, Shadow, ShadowBold, Small};
 use crate::sdk::classes::Vec2;
 use crate::sdk::structs::entities::CEntity;
 use crate::sdk::surface::Vertex;
-use crate::{
-    feature, font, math, Color, EventPaintTraverse, Vec3, WeaponType, INTERFACES, WEAPON_MAP,
-};
+use crate::util::math;
+use crate::{feature, font, Color, EventPaintTraverse, Vec3, WeaponType, INTERFACES, WEAPON_MAP};
 use color_space::{Hsv, Rgb};
 use std::f32::consts::PI;
 use std::ffi::CStr;
