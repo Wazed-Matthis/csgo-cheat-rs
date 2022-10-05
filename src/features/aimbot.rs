@@ -3,7 +3,7 @@ use std::mem;
 use std::mem::zeroed;
 use std::ptr::null_mut;
 
-use log::debug;
+use log::{debug, error};
 use vtables::VTable;
 
 use crate::sdk::classes::EButtons;
@@ -33,13 +33,36 @@ impl Aimbot {
         let mut player_eye_pos = unsafe { zeroed() };
         local_player.eye_pos(&mut player_eye_pos);
 
+        let weapon_data = match local_player.weapon() {
+            None => {
+                error!("bruh");
+                return;
+            }
+            Some(weapon) => weapon.get_weapon_data(),
+        };
+
         let mut possible_targets = (0..interfaces.global_vars.max_clients)
             .filter_map(|i| interfaces.entity_list.entity(i).get())
             .filter(|entity| {
+                let mut bone_matrices = unsafe { zeroed() };
+
+                unsafe {
+                    entity.setup_bones(&mut bone_matrices, 255, 255, 0.0);
+                }
+                let entity_bone_pos = bone_matrices[8].origin();
+                let result = Self::simulate_shot(
+                    player_eye_pos,
+                    (entity_bone_pos - player_eye_pos).normalized(),
+                    TraceFilterGeneric::new(local_player.as_ptr()),
+                    weapon_data,
+                    entity,
+                );
+
                 entity.is_player()
                     && entity.is_alive()
                     && entity.as_ptr() != local_player.as_ptr()
                     && entity.team() != local_player.team()
+                    && result.0 > 0.0
             })
             .collect::<Vec<CEntity>>();
 
@@ -89,11 +112,6 @@ impl Aimbot {
 
         let closest_target = possible_targets.first();
 
-        let weapon_data = match local_player.weapon() {
-            None => return,
-            Some(weapon) => weapon.get_weapon_data(),
-        };
-
         if let Some(closest) = closest_target {
             let guard = CONFIG.get().unwrap();
             let aimbot_settings = &guard.features.Aimbot;
@@ -102,7 +120,7 @@ impl Aimbot {
             unsafe {
                 closest.setup_bones(&mut bone_matrices, 255, 255, 0.0);
             }
-            let shoot_pos = bone_matrices[3].origin();
+            let shoot_pos = bone_matrices[8].origin();
 
             // this code generates equidistant points on 2D circle
             const PHI: f32 = 1.6180339;
@@ -128,7 +146,7 @@ impl Aimbot {
                     closest,
                 );
 
-                if (damage > 0.0) {
+                if damage > 0.0 {
                     debug!(
                         "Iter: {i} Damage: {damage}, hitgroup: {hit_group:?}, is lethal: {lethal}"
                     );
